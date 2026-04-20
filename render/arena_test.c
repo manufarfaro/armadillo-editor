@@ -142,6 +142,34 @@ void test_arena_ensure_no_op_when_already_sized(void) {
     arena_destroy(a);
 }
 
+/* arena_reset: watermark back to 0, backing preserved
+ * ─────────────────────────────────────────────────────
+ * arena_reset SHALL clear high_water so the next parse cycle starts
+ * fresh. The backing Handle MUST NOT be disposed — its memory is
+ * reused, saving a NewHandle per parse. */
+void test_arena_reset_clears_watermark_but_preserves_capacity(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    void* p;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+    (void)arena_alloc(a, 1000);
+    TEST_ASSERT_EQUAL_INT(1000, arena_high_water(a));
+    TEST_ASSERT_EQUAL_INT(4096, arena_capacity(a));
+
+    arena_reset(a);
+    TEST_ASSERT_EQUAL_INT(0, arena_high_water(a));
+    TEST_ASSERT_EQUAL_INT(4096, arena_capacity(a));
+    TEST_ASSERT_EQUAL_INT(0, f.dispose_handle_calls);
+
+    /* Next alloc reuses the same memory region. */
+    p = arena_alloc(a, 500);
+    TEST_ASSERT_NOT_NULL(p);
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
@@ -150,5 +178,6 @@ int main(void) {
     RUN_TEST(test_arena_ensure_doubles_when_under_cap);
     RUN_TEST(test_arena_ensure_grow_failure_preserves_state);
     RUN_TEST(test_arena_ensure_no_op_when_already_sized);
+    RUN_TEST(test_arena_reset_clears_watermark_but_preserves_capacity);
     return UNITY_END();
 }
