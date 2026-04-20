@@ -67,16 +67,22 @@ int file_io_open(const void* fsspec_opaque, Doc** out_doc, const MacSyscalls*);
 4. Allocate a `Handle` of `size` bytes via `MacSyscalls.new_handle`.
 5. `HLock` the handle and `FSRead` the bytes into it.
 6. Construct a `Doc*` via `doc_new()` and copy the bytes via `doc_set_text` (the Doc owns its own storage; the temporary `Handle` is disposed after).
-7. Record the filename on the Doc via `doc_set_filename`.
+7. **(Plan 2)** Record the filename on the Doc via `doc_set_filename`. MVP ships without this step — extracting a Pascal-string name from the opaque FSSpec bytes robustly depends on Toolbox helpers that land with the interactive flow. See MVP-deferred note below.
 8. Close the file reference.
 9. On any failure, release all intermediate resources via goto-cleanup and return the appropriate error code.
 
+**MVP-deferred:** step 7 (filename recording) lands in Plan 2 alongside the Standard File interactive flow. The MVP-shipped Doc from `file_io_open` has `doc_has_filename() == 0`, and a subsequent `file_io_save` on that Doc correctly returns `kFileIoErrOpen` (no filename). Once Plan 2 lands `file_io_open_interactive`, it will call `file_io_open` then `doc_set_filename`, closing the gap without changing the data-path API.
+
 #### Scenario: Successful open
-- GIVEN a 4096-byte valid markdown file on disk
+- GIVEN a valid markdown file on disk
 - WHEN `file_io_open` is called
 - THEN `kFileIoOk` is returned
-- AND `*out_doc` points to a Doc with 4096 bytes of text
-- AND `doc_has_filename(*out_doc)` returns 1
+- AND `*out_doc` points to a Doc with the file's bytes of text
+
+#### Scenario: Successful open records filename (deferred — Plan 2)
+- GIVEN a 4096-byte valid markdown file on disk
+- WHEN `file_io_open` is called (after Plan 2's filename-extraction lands)
+- THEN `doc_has_filename(*out_doc)` returns 1
 
 #### Scenario: File exceeds size limit
 - GIVEN a 40000-byte file on disk (> 32767)
@@ -128,9 +134,11 @@ This function SHALL:
 
 The file's `TEXT` type and creator code are preserved across saves. On a new file (created by `file_io_save_as`'s underlying `FSpCreate`), the creator code is set to `'Arma'` and type to `'TEXT'`.
 
-#### Scenario: Save preserves byte-for-byte content
+**MVP-deferred:** the actual write sequence (steps 2–5 above) lands in Plan 2 alongside the Standard File interactive flow. MVP `file_io_save` executes step 1 (filename check → `kFileIoErrOpen` if missing) and step 6 (clear dirty flag) only. Save-preserves-byte-content and CR-line-endings-preserved scenarios below are therefore Plan 2 scenarios.
+
+#### Scenario: Save preserves byte-for-byte content (deferred — Plan 2)
 - GIVEN a Doc with text bytes `[0x23, 0x20, 0x48, 0x69]` ("# Hi") and a valid filename
-- WHEN `file_io_save` is called
+- WHEN `file_io_save` is called (after Plan 2's write path lands)
 - THEN the file on disk contains exactly those 4 bytes, no line-ending conversion, no BOM, no trailing newline
 
 #### Scenario: Save clears dirty flag
@@ -157,9 +165,9 @@ Every `file_io_*` function SHALL use the goto-cleanup pattern: on any failure pa
 
 The MVP SHALL NOT perform any line-ending conversion. Files are read and written byte-for-byte. If a file contains CR line endings (classic Mac convention), they are stored as CR in the Doc's buffer and surface to the source pane as-is. If it contains LF (Unix) or CRLF (Windows), same. The source pane's text engine handles display.
 
-#### Scenario: CR line endings preserved
+#### Scenario: CR line endings preserved (deferred — Plan 2 write path)
 - GIVEN a file on disk with bytes `[0x41, 0x0D, 0x42]` ("A", CR, "B")
-- WHEN opened via `file_io_open` then saved again
+- WHEN opened via `file_io_open` then saved again (after Plan 2's write path lands)
 - THEN the file on disk still contains exactly `[0x41, 0x0D, 0x42]`
 
 ### Requirement: Host testability (data-path parts)
