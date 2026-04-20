@@ -7,6 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define kArenaDoublingCap   (64u * 1024u)
+#define kArenaLinearStep    (32u * 1024u)
+#define kArenaHardCap      (512u * 1024u)
+
 struct Arena {
     void*              backing;         /* Handle (void**) */
     char*              base;            /* = *backing while HLocked */
@@ -62,6 +66,37 @@ void* arena_alloc(Arena* a, size_t n_bytes) {
     return p;
 }
 
-/* Stubs for the rest of the API — fleshed out in later tasks. */
-int  arena_ensure(Arena* a, size_t n) { (void)a; (void)n; return -1; }
+int arena_ensure(Arena* a, size_t bytes_needed) {
+    size_t needed_total;
+    size_t next;
+    int rc;
+
+    if (!a) return -1;
+    needed_total = a->high_water + bytes_needed;
+    if (needed_total <= a->size) return 0;
+
+    /* Compute next size using the design's growth policy. */
+    next = a->size;
+    while (next < needed_total) {
+        if (next < kArenaDoublingCap) {
+            next = next < 1 ? 1 : next * 2;
+        } else {
+            next += kArenaLinearStep;
+        }
+        if (next > kArenaHardCap) return -1;
+    }
+
+    /* SetHandleSize may relocate the block. HUnlock first, resize,
+     * rebind base after relocking. If resize fails, relock at old
+     * size and return failure. */
+    a->sys->hunlock(a->backing);
+    rc = a->sys->set_handle_size(a->backing, (long)next);
+    a->sys->hlock(a->backing);
+    a->base = *(char**)a->backing;
+    if (rc != 0) return -1;
+
+    a->size = next;
+    return 0;
+}
+
 void  arena_reset(Arena* a)           { if (a) a->high_water = 0; }

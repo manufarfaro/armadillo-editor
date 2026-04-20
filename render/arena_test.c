@@ -85,10 +85,70 @@ void test_arena_alloc_beyond_capacity_returns_null(void) {
     arena_destroy(a);
 }
 
+/* arena_ensure: pre-parse growth
+ * ───────────────────────────────
+ * arena_ensure SHALL grow the backing Handle so at least bytes_needed
+ * bytes are available above high_water. Doubling up to 64KB, then
+ * +32KB linear, capped at 512KB. */
+void test_arena_ensure_doubles_when_under_cap(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    int rc;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+    TEST_ASSERT_EQUAL_INT(4096, arena_capacity(a));
+
+    rc = arena_ensure(a, 6000);   /* needs >= 6000 available */
+    TEST_ASSERT_EQUAL_INT(0, rc);
+    TEST_ASSERT_TRUE(arena_capacity(a) >= 6000);
+    /* After doubling from 4096 we expect at least 8192. */
+    TEST_ASSERT_EQUAL_INT(8192, arena_capacity(a));
+
+    arena_destroy(a);
+}
+
+void test_arena_ensure_grow_failure_preserves_state(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    f.set_handle_size_fail_after = 0;  /* the FIRST SetHandleSize fails */
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    int rc;
+    arena_init(&a, 128, (const MacSyscalls*)&f);
+    (void)arena_alloc(a, 64);
+
+    rc = arena_ensure(a, 10000);
+    TEST_ASSERT_NOT_EQUAL(0, rc);
+    TEST_ASSERT_EQUAL_INT(128, arena_capacity(a));
+    TEST_ASSERT_EQUAL_INT(64, arena_high_water(a));
+
+    arena_destroy(a);
+}
+
+void test_arena_ensure_no_op_when_already_sized(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    int rc;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+
+    rc = arena_ensure(a, 1024);   /* already have 4096 > 1024 */
+    TEST_ASSERT_EQUAL_INT(0, rc);
+    TEST_ASSERT_EQUAL_INT(4096, arena_capacity(a));
+    TEST_ASSERT_EQUAL_INT(0, f.set_handle_size_calls);
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
     RUN_TEST(test_arena_alloc_returns_4byte_aligned_pointer);
     RUN_TEST(test_arena_alloc_beyond_capacity_returns_null);
+    RUN_TEST(test_arena_ensure_doubles_when_under_cap);
+    RUN_TEST(test_arena_ensure_grow_failure_preserves_state);
+    RUN_TEST(test_arena_ensure_no_op_when_already_sized);
     return UNITY_END();
 }
