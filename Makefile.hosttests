@@ -27,16 +27,16 @@ all: $(TESTS)
 test: $(TESTS)
 	@if [ -z "$(TESTS)" ]; then \
 	    echo "No test binaries defined yet — returning green (no tests to run)."; \
-	    exit 0; \
+	else \
+	    pass=0; fail=0; \
+	    for t in $(TESTS); do \
+	        echo "=== $$t ==="; \
+	        if $$t; then pass=$$(expr $$pass + 1); else fail=$$(expr $$fail + 1); fi; \
+	    done; \
+	    echo; \
+	    echo "Summary: $$pass passed, $$fail failed"; \
+	    test $$fail -eq 0; \
 	fi
-	@pass=0; fail=0; \
-	for t in $(TESTS); do \
-	    echo "=== $$t ==="; \
-	    if $$t; then pass=$$(expr $$pass + 1); else fail=$$(expr $$fail + 1); fi; \
-	done; \
-	echo; \
-	echo "Summary: $$pass passed, $$fail failed"; \
-	test $$fail -eq 0
 
 clean:
 	rm -rf $(BUILDDIR)
