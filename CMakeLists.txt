@@ -26,7 +26,10 @@ set(MD4C_SOURCES ${MD4C_DIR}/md4c.c)
 # The app target. Source list is incremental — modules are added as
 # they're implemented across Plan 1 and Plan 2.
 add_application(ArmadilloEditor
-    # Renderer + pipeline (Plan 1 modules land here)
+    # Phase 1 stub main (replaced by src/app.c in Plan 2)
+    src/stub_main.c
+
+    # Renderer + pipeline (added by their Plan 1 phases)
     # render/arena.c
     # render/render.c
     # mdparse/mdparse.c
@@ -35,7 +38,7 @@ add_application(ArmadilloEditor
     # src/debounce.c
     # src/file_io.c
 
-    # App shell (Plan 2 adds these)
+    # App shell (Plan 2 replaces stub_main.c with these)
     # src/app.c
     # src/menus.c
     # src/win_editor.c
