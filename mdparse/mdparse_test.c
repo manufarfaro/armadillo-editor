@@ -134,9 +134,88 @@ void test_mdparse_empty_source_produces_no_events(void) {
     TEST_ASSERT_EQUAL_INT(0, r.count);
 }
 
+void test_mdparse_h1_emits_heading_with_level_1(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    int rc = mdparse_run("# Hello", 7, &s, 1);
+    size_t i;
+    int saw_open_h = 0;
+    int saw_text = 0;
+
+    TEST_ASSERT_EQUAL_INT(kMdParseOk, rc);
+    TEST_ASSERT_TRUE(r.count >= 2);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockHeading) {
+            saw_open_h = 1;
+            TEST_ASSERT_EQUAL_INT(1, r.events[i].attrs.h_level);
+        }
+        if (r.events[i].kind == kRecText &&
+            strstr(r.events[i].text, "Hello")) {
+            saw_text = 1;
+        }
+    }
+    TEST_ASSERT_TRUE(saw_open_h);
+    TEST_ASSERT_TRUE(saw_text);
+}
+
+void test_mdparse_paragraph_emits_paragraph_block(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+    int saw = 0;
+
+    mdparse_run("hi", 2, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockParagraph) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_nested_list_stamps_depth(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    const char src[] = "- a\n  - b\n";
+    unsigned char depths_seen[8];
+    int n_depths = 0;
+    size_t i;
+
+    mdparse_run(src, sizeof src - 1, &s, 1);
+    for (i = 0; i < r.count && n_depths < 8; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockListItem) {
+            depths_seen[n_depths++] = r.events[i].attrs.list_depth;
+        }
+    }
+    TEST_ASSERT_EQUAL_INT(2, n_depths);
+    TEST_ASSERT_EQUAL_INT(1, depths_seen[0]);
+    TEST_ASSERT_EQUAL_INT(2, depths_seen[1]);
+}
+
+void test_mdparse_blockquote_stamps_quote_depth(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    const char src[] = "> text\n";
+    size_t i;
+    int saw = 0;
+
+    mdparse_run(src, sizeof src - 1, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockParagraph &&
+            r.events[i].attrs.quote_depth == 1) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_mdparse_empty_source_produces_no_events);
+    RUN_TEST(test_mdparse_h1_emits_heading_with_level_1);
+    RUN_TEST(test_mdparse_paragraph_emits_paragraph_block);
+    RUN_TEST(test_mdparse_nested_list_stamps_depth);
+    RUN_TEST(test_mdparse_blockquote_stamps_quote_depth);
     /* Additional tests added in subsequent tasks. */
     return UNITY_END();
 }
