@@ -326,12 +326,42 @@ void test_render_layout_bold_run_wraps_with_set_font_calls(void) {
         p = layout_params_defaults();
         render_layout_and_draw(m, &p, &ctx);
 
-        /* Expect at least 3 draw_text calls: "plain ", "bold", " rest". */
-        TEST_ASSERT_TRUE(count_ops(&r, kRecDrawText) >= 3);
-
-        for (i = 0; i < r.count; i++) {
-            if (r.calls[i].op == kRecSetFont &&
-                (r.calls[i].font_face & 0x01)) saw_bold_font = 1;
+        /* Spec scenario "Bold run in a paragraph" (render/spec.md §Inline
+         * style run application): expect the draw_text calls in order —
+         * "plain " (6 bytes, base style), "bold" (4 bytes, bold style
+         * applied), " rest" (5 bytes, base style restored). Walk the
+         * recorded calls; find each draw_text; verify length and bytes;
+         * verify the set_font immediately preceding "bold" has the bold
+         * bit and the set_font preceding " rest" does not. */
+        {
+            int found_plain = 0, found_bold = 0, found_rest = 0;
+            int bold_set_font_before_bold = 0;
+            int plain_set_font_before_rest = 0;
+            RecCall* prev_set_font = 0;
+            for (i = 0; i < r.count; i++) {
+                RecCall* c = &r.calls[i];
+                if (c->op == kRecSetFont) {
+                    prev_set_font = c;
+                    if (c->font_face & 0x01) saw_bold_font = 1;
+                } else if (c->op == kRecDrawText) {
+                    if (c->text_len == 6 && memcmp(c->text, "plain ", 6) == 0) {
+                        found_plain = 1;
+                    } else if (c->text_len == 4 && memcmp(c->text, "bold", 4) == 0) {
+                        found_bold = 1;
+                        if (prev_set_font && (prev_set_font->font_face & 0x01))
+                            bold_set_font_before_bold = 1;
+                    } else if (c->text_len == 5 && memcmp(c->text, " rest", 5) == 0) {
+                        found_rest = 1;
+                        if (prev_set_font && !(prev_set_font->font_face & 0x01))
+                            plain_set_font_before_rest = 1;
+                    }
+                }
+            }
+            TEST_ASSERT_TRUE(found_plain);
+            TEST_ASSERT_TRUE(found_bold);
+            TEST_ASSERT_TRUE(found_rest);
+            TEST_ASSERT_TRUE(bold_set_font_before_bold);
+            TEST_ASSERT_TRUE(plain_set_font_before_rest);
         }
         TEST_ASSERT_TRUE(saw_bold_font);
 
