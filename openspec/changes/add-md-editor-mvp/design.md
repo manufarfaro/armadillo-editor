@@ -856,8 +856,8 @@ add_application(ArmadilloSmokeTest
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -g \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
-            -Itest -Itest/unity -Ithird_party/md4c/src
-UNITY    := test/unity/unity.c
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
+UNITY    := third_party/unity/unity.c
 FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
