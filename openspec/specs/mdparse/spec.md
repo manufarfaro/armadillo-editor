@@ -79,7 +79,7 @@ The adapter SHALL map md4c's `MD_BLOCKTYPE` values to project `BlockKind` values
 | MD_BLOCK_P        | kBlockParagraph      |
 | MD_BLOCK_H        | kBlockHeading        |
 | MD_BLOCK_LI       | kBlockListItem       |
-| MD_BLOCK_QUOTE    | kBlockBlockQuote     |
+| MD_BLOCK_QUOTE    | *not emitted as block; tracked for quote_depth only* |
 | MD_BLOCK_CODE     | kBlockCodeBlock      |
 | MD_BLOCK_HR       | kBlockHr             |
 | MD_BLOCK_HTML     | kBlockHtml           |
