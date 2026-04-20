@@ -5988,10 +5988,10 @@ Update the stub README (created in Task 2) with workflow badges and a brief CI s
 ```markdown
 # Armadillo Editor
 
-[![host-tests](https://github.com/OWNER/REPO/actions/workflows/host-tests.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/host-tests.yml)
-[![lint](https://github.com/OWNER/REPO/actions/workflows/lint.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/lint.yml)
-[![codeql](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
-[![release](https://github.com/OWNER/REPO/actions/workflows/release.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/release.yml)
+[![host-tests](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml)
+[![lint](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml)
+[![codeql](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml)
+[![release](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml)
 
 A System 7 markdown editor for 68030-and-up classic Macintosh. Cross-compiled with [Retro68](https://github.com/autc04/Retro68).
 
@@ -6065,22 +6065,7 @@ See `CLAUDE.md` for the load-bearing rules (flat block model, single-parse-two-c
 TBD.
 ```
 
-**Note on the badge URLs:** the placeholders `OWNER/REPO` need to be replaced with the actual GitHub owner and repo name once the remote is configured. The task below captures this as an explicit sub-step.
-
-- [ ] **Step 50.2: Substitute actual GitHub coordinates in the badge URLs**
-
-At plan-execution time:
-
-```bash
-# Replace OWNER with the GitHub owner (username or org) and REPO with the repo name.
-# Example: if the repo is github.com/manufarfaro/armadillo-editor, run:
-sed -i.bak 's|github.com/OWNER/REPO|github.com/manufarfaro/armadillo-editor|g' README.md
-rm README.md.bak
-```
-
-If the repo doesn't have a remote yet, skip this step and leave `OWNER/REPO` as a placeholder; run the `sed` once the remote is set. The badges render "no status" until the remote exists and the workflows have run at least once.
-
-- [ ] **Step 50.3: Commit**
+- [ ] **Step 50.2: Commit**
 
 ```bash
 git add README.md
@@ -6096,8 +6081,7 @@ the Actions page for each workflow. Local + Docker-based cross-
 compile instructions. Brief CI section describing each workflow's
 runtime and the tag-based release flow.
 
-Badge URLs use OWNER/REPO placeholders; replaced at push-to-remote
-time via the sed command documented in the README itself.
+Badge URLs point at github.com/manufarfaro/armadillo-editor.
 ```
 
 ---
