@@ -194,6 +194,110 @@ void test_render_model_paragraph_with_bold_run(void) {
     }
 }
 
+static int count_ops(const Recorder* r, RecOpKind op) {
+    int n = 0;
+    size_t i;
+    for (i = 0; i < r->count; i++) if (r->calls[i].op == op) n++;
+    return n;
+}
+
+void test_render_layout_empty_model_emits_nothing(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        /* Allowed to call get_font_metrics for setup but nothing else. */
+        TEST_ASSERT_EQUAL_INT(0, count_ops(&r, kRecDrawText));
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
+void test_render_layout_single_paragraph_draws_text(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr);
+        sink->on_block_open(sink->ctx, kBlockParagraph, &attr);
+        sink->on_text(sink->ctx, "hello", 5, 0);
+        sink->on_block_close(sink->ctx, kBlockParagraph);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        TEST_ASSERT_EQUAL_INT(1, count_ops(&r, kRecDrawText));
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
+void test_render_layout_h1_uses_chicago_17_bold(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        int saw = 0;
+        size_t i;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr); attr.h_level = 1;
+        sink->on_block_open(sink->ctx, kBlockHeading, &attr);
+        sink->on_text(sink->ctx, "H", 1, 0);
+        sink->on_block_close(sink->ctx, kBlockHeading);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        /* Find a set_font with size=17 and a bold face bit (bit 0). */
+        for (i = 0; i < r.count; i++) {
+            if (r.calls[i].op == kRecSetFont &&
+                r.calls[i].font_size == 17 &&
+                (r.calls[i].font_face & 0x01)) saw = 1;
+        }
+        TEST_ASSERT_TRUE(saw);
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_render_model_empty_has_zero_blocks);
@@ -203,5 +307,8 @@ int main(void) {
     RUN_TEST(test_render_model_code_block_captures_text);
     RUN_TEST(test_render_model_hr_block_has_no_text);
     RUN_TEST(test_render_model_paragraph_with_bold_run);
+    RUN_TEST(test_render_layout_empty_model_emits_nothing);
+    RUN_TEST(test_render_layout_single_paragraph_draws_text);
+    RUN_TEST(test_render_layout_h1_uses_chicago_17_bold);
     return UNITY_END();
 }
