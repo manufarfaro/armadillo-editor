@@ -1,0 +1,42 @@
+# Makefile.hosttests — host unit tests for Armadillo Editor
+#
+# Builds and runs each module's _test.c against native cc. Intended for
+# fast iteration (< 2 s full suite) with no Retro68/QEMU dependency.
+#
+# Test binaries land in build_hosttests/; this directory is gitignored.
+#
+# Run: make -f Makefile.hosttests test
+# Clean: make -f Makefile.hosttests clean
+
+CC       ?= cc
+CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
+            -Itest -Itest/unity -Ithird_party/md4c/src
+BUILDDIR := build_hosttests
+
+UNITY    := test/unity/unity.c
+FAKES    := test/fake_syscalls.c
+RECORDER := test/recorder.c
+
+# Test binaries — populated phase by phase as implementations land.
+TESTS :=
+
+.PHONY: all test clean
+all: $(TESTS)
+
+test: $(TESTS)
+	@if [ -z "$(TESTS)" ]; then \
+	    echo "No test binaries defined yet — returning green (no tests to run)."; \
+	    exit 0; \
+	fi
+	@pass=0; fail=0; \
+	for t in $(TESTS); do \
+	    echo "=== $$t ==="; \
+	    if $$t; then pass=$$(expr $$pass + 1); else fail=$$(expr $$fail + 1); fi; \
+	done; \
+	echo; \
+	echo "Summary: $$pass passed, $$fail failed"; \
+	test $$fail -eq 0
+
+clean:
+	rm -rf $(BUILDDIR)
