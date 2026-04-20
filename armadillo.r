@@ -7,8 +7,10 @@
 
 #include "Types.r"
 
-/* Size flags the app needs — small heap + accepts suspend/resume events.
- * 2MB is a safe MVP stack + heap floor; tune later if needed. */
+/* Size Manager resource.
+ * 2 MB preferred / 1 MB minimum — MVP stub sizing; Plan 2 tunes
+ * against real arena + TE footprints. 32-bit clean for 68030+ hosts
+ * (no 24-bit addressing assumed). */
 resource 'SIZE' (-1) {
     reserved,
     acceptSuspendResumeEvents,
@@ -18,7 +20,7 @@ resource 'SIZE' (-1) {
     backgroundAndForeground,
     dontGetFrontClicks,
     ignoreChildDiedEvents,
-    not32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
+    is32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
     isHighLevelEventAware,
     localAndRemoteHLEvents,
     notStationeryAware,
