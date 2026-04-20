@@ -51,11 +51,11 @@ test: $(TESTS)
 
 $(BUILDDIR)/arena_test: render/arena.c render/arena_test.c $(UNITY) $(FAKES)
 	@mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 $(BUILDDIR)/doc_test: src/doc.c src/doc_test.c $(UNITY)
 	@mkdir -p $(BUILDDIR)
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 # Pull in auto-generated header dependency files so editing a header
 # triggers a rebuild of anything that includes it.
