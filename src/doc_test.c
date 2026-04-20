@@ -85,6 +85,31 @@ void test_doc_set_text_over_limit_is_rejected(void) {
     doc_free(d);
 }
 
+void test_doc_mark_clean_clears_dirty(void) {
+    Doc* d = doc_new();
+    doc_set_text(d, "x", 1);
+    TEST_ASSERT_EQUAL_INT(1, doc_is_dirty(d));
+    doc_mark_clean(d);
+    TEST_ASSERT_EQUAL_INT(0, doc_is_dirty(d));
+    doc_free(d);
+}
+
+void test_doc_filename_round_trip(void) {
+    Doc* d = doc_new();
+    TEST_ASSERT_EQUAL_INT(0, doc_has_filename(d));
+    doc_set_filename(d, "notes.md", 8);
+    TEST_ASSERT_EQUAL_INT(1, doc_has_filename(d));
+
+    {
+        unsigned char len;
+        const char* fn = doc_filename(d, &len);
+        TEST_ASSERT_EQUAL_INT(8, len);
+        TEST_ASSERT_EQUAL_MEMORY("notes.md", fn, 8);
+    }
+
+    doc_free(d);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_doc_new_returns_non_null_empty_clean_doc);
@@ -92,5 +117,7 @@ int main(void) {
     RUN_TEST(test_doc_set_text_round_trip);
     RUN_TEST(test_doc_set_text_overwrite);
     RUN_TEST(test_doc_set_text_over_limit_is_rejected);
+    RUN_TEST(test_doc_mark_clean_clears_dirty);
+    RUN_TEST(test_doc_filename_round_trip);
     return UNITY_END();
 }
