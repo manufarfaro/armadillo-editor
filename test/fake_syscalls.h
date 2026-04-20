@@ -22,7 +22,7 @@ typedef struct FakeSyscalls {
     short         get_eof_result;
     long          get_eof_size;                /* value returned via *out_size */
     short         mem_error_result;
-    short         new_handle_fail_after;       /* -1 = never */
+    int           new_handle_fail_after;       /* -1 = never */
     short         gestalt_result;
     long          gestalt_response;            /* value returned via *out_response */
 

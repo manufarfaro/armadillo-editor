@@ -1129,7 +1129,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "render/arena.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 ```
 
@@ -1298,7 +1298,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "render/render.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add render/render.h
 ```
@@ -1382,7 +1382,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "mdparse/mdparse.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I render -I mdparse -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add mdparse/mdparse.h
 git rm mdparse/.gitkeep
@@ -1458,7 +1458,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "scanner/scanner.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I render -I mdparse -I scanner -I src -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add scanner/scanner.h
 git rm scanner/.gitkeep
@@ -1556,7 +1556,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "src_pane/src_pane.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I src_pane -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add src_pane/src_pane.h
 git rm src_pane/.gitkeep
@@ -2083,7 +2083,7 @@ void fake_syscalls_activate(FakeSyscalls* f) {
 - [ ] **Step 21.4: Verify compile**
 
 ```bash
-cc -std=c89 -Wall -Werror -I src -I test -c test/fake_syscalls.c -o /tmp/fs.o
+cc -std=c89 -Wall -Werror -I. -c test/fake_syscalls.c -o /tmp/fs.o
 rm /tmp/fs.o
 ```
 
@@ -5748,7 +5748,7 @@ jobs:
             --inline-suppr \
             --suppress=missingIncludeSystem \
             --suppress=unusedFunction \
-            -I src -I src_pane -I render -I mdparse -I scanner \
+            -I . \
             -I third_party/md4c/src \
             src/ src_pane/ render/ mdparse/ scanner/
 

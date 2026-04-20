@@ -19,6 +19,9 @@ typedef struct BlockAttrs {
     unsigned char list_ordered;  /* 0 = bullet, 1 = numbered             */
 } BlockAttrs;
 
+/* Sink callback return convention: 0 = continue parsing, non-zero =
+ * abort. When any sink returns non-zero, mdparse_run stops dispatching
+ * further events and returns kMdParseErrSinkAbort to the caller. */
 typedef struct MdParseSink {
     int (*on_block_open)(void* ctx, BlockKind kind,
                          const BlockAttrs* attrs);

@@ -8,7 +8,10 @@
 # CMakeLists.txt target_include_directories (cross-build target flags).
 
 CompileFlags:
+  # -xc: force C (clangd treats .h as Objective-C++ by default on macOS,
+  #      which makes -std=c89 an invalid combination).
   Add:
+    - -xc
     - -std=c89
     - -Wall
     - -I.
