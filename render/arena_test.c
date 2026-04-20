@@ -20,8 +20,31 @@
 void setUp(void) {}
 void tearDown(void) {}
 
+/* arena_init: allocation + HLock
+ * ───────────────────────────────
+ * arena_init SHALL allocate a Handle of the requested size via
+ * MacSyscalls.new_handle and HLock it. Post-conditions: the arena
+ * returned is non-NULL; new_handle was called exactly once; hlock
+ * was called exactly once; the arena reports the initial capacity. */
+void test_arena_init_allocates_and_hlocks_backing_handle(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    int rc = arena_init(&a, 4096, (const MacSyscalls*)&f);
+
+    TEST_ASSERT_EQUAL_INT(0, rc);
+    TEST_ASSERT_NOT_NULL(a);
+    TEST_ASSERT_EQUAL_INT(1, f.new_handle_calls);
+    TEST_ASSERT_EQUAL_INT(1, f.hlock_calls);
+    TEST_ASSERT_EQUAL_INT(4096, arena_capacity(a));
+    TEST_ASSERT_EQUAL_INT(0, arena_high_water(a));
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
-    /* Tests added in subsequent tasks. */
+    RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
     return UNITY_END();
 }
