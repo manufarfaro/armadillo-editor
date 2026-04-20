@@ -1,0 +1,71 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*', 'mvp-*', 'tier-*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  cross-build:
+    runs-on: ubuntu-latest
+    # Official Retro68 image — auto-built on every commit to Retro68 main.
+    # Cross-toolchain lives at /Retro68-build/toolchain inside the container.
+    container:
+      image: ghcr.io/autc04/retro68:latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure with Retro68 toolchain
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+            -DCMAKE_TOOLCHAIN_FILE=/Retro68-build/toolchain/m68k-apple-macos/cmake/retro68.toolchain.cmake
+
+      - name: Cross-compile
+        run: |
+          cd build
+          make
+
+      - name: Verify artifacts exist
+        run: |
+          ls -la build/ArmadilloEditor.APPL build/ArmadilloEditor.dsk
+          test -s build/ArmadilloEditor.dsk
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ArmadilloEditor-${{ github.sha }}
+          path: |
+            build/ArmadilloEditor.APPL
+            build/ArmadilloEditor.dsk
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    needs: cross-build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts from cross-build
+        uses: actions/download-artifact@v4
+        with:
+          name: ArmadilloEditor-${{ github.sha }}
+          path: release-artifacts
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/ArmadilloEditor.APPL
+            release-artifacts/ArmadilloEditor.dsk
+          draft: false
+          prerelease: ${{ contains(github.ref, '-rc') || contains(github.ref, '-alpha') || contains(github.ref, '-beta') }}
+          generate_release_notes: true
