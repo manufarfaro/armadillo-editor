@@ -119,6 +119,7 @@ void test_scanner_html_block_emits_one_run_covering_all_text_events(void) {
         TEST_ASSERT_EQUAL_INT(10, runs[0].start);
         TEST_ASSERT_EQUAL_INT(27, runs[0].length);  /* 29 + 8 - 10 */
         TEST_ASSERT_EQUAL_INT(kStyleHtmlSpan, runs[0].kind);
+        TEST_ASSERT_EQUAL_INT(-1, runs[0].link_index);
 
         arena_destroy(a);
     }

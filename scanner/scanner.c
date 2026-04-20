@@ -75,15 +75,15 @@ static int sc_block_open(void* ctx, BlockKind k, const BlockAttrs* a) {
 static int sc_block_close(void* ctx, BlockKind k) {
     Scanner* s = (Scanner*)ctx;
     if (k == kBlockHtml && s->in_html_block) {
+        s->in_html_block = 0;
         if (s->html_seen_any_text) {
             StyleRun r;
             r.start = s->html_block_start;
             r.length = (unsigned short)(s->html_block_end - s->html_block_start);
             r.kind = kStyleHtmlSpan;
             r.link_index = -1;
-            scanner_push(s, r);
+            return scanner_push(s, r);
         }
-        s->in_html_block = 0;
     }
     return 0;
 }
