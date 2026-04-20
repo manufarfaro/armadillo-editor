@@ -191,6 +191,34 @@ void test_arena_destroy_disposes_backing_exactly_once(void) {
     TEST_ASSERT_EQUAL_INT(1, f.dispose_handle_calls);
 }
 
+/* Reset + alloc cycle: reuses memory
+ * ─────────────────────────────────────
+ * Simulates the parse pipeline's inner loop: many reset+alloc cycles
+ * should NOT trigger additional NewHandle calls. Only the initial
+ * init and any grow events should. */
+void test_arena_reset_alloc_cycle_does_not_allocate_new_handles(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    int initial_new_handles;
+    int i;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+    initial_new_handles = f.new_handle_calls;  /* should be 1 */
+    TEST_ASSERT_EQUAL_INT(1, initial_new_handles);
+
+    for (i = 0; i < 10; i++) {
+        arena_reset(a);
+        (void)arena_alloc(a, 1000);
+        (void)arena_alloc(a, 500);
+    }
+
+    TEST_ASSERT_EQUAL_INT(1, f.new_handle_calls);     /* still 1 */
+    TEST_ASSERT_EQUAL_INT(0, f.set_handle_size_calls); /* never grew */
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
@@ -201,5 +229,6 @@ int main(void) {
     RUN_TEST(test_arena_ensure_no_op_when_already_sized);
     RUN_TEST(test_arena_reset_clears_watermark_but_preserves_capacity);
     RUN_TEST(test_arena_destroy_disposes_backing_exactly_once);
+    RUN_TEST(test_arena_reset_alloc_cycle_does_not_allocate_new_handles);
     return UNITY_END();
 }
