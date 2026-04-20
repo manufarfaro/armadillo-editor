@@ -1,0 +1,28 @@
+# Build artifacts
+build/
+build_test/
+build_hosttests/
+
+# Retro68 outputs
+*.APPL
+*.dsk
+*.bin
+*.flt
+*.gdb
+*.code
+*.rsrc
+*.ad
+
+# Host-test outputs
+*.o
+*.obj
+*.a
+
+# macOS / editor noise
+.DS_Store
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+Thumbs.db
