@@ -11,10 +11,10 @@
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
-            -Itest -Itest/unity -Ithird_party/md4c/src
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
 BUILDDIR := build_hosttests
 
-UNITY    := test/unity/unity.c
+UNITY    := third_party/unity/unity.c
 FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
