@@ -43,8 +43,52 @@ void test_arena_init_allocates_and_hlocks_backing_handle(void) {
     arena_destroy(a);
 }
 
+/* arena_alloc: alignment and bump semantics
+ * ──────────────────────────────────────────
+ * arena_alloc SHALL return pointers aligned to 4 bytes and bump
+ * high_water by the requested size rounded up to 4. A 5-byte request
+ * consumes 8 bytes of arena space. */
+void test_arena_alloc_returns_4byte_aligned_pointer(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    void* p; void* q;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+
+    p = arena_alloc(a, 5);
+    TEST_ASSERT_NOT_NULL(p);
+    TEST_ASSERT_EQUAL_INT(0, (size_t)p & 3u);
+    TEST_ASSERT_EQUAL_INT(8, arena_high_water(a));
+
+    q = arena_alloc(a, 1);
+    TEST_ASSERT_NOT_NULL(q);
+    TEST_ASSERT_EQUAL_INT(0, (size_t)q & 3u);
+    TEST_ASSERT_EQUAL_INT(12, arena_high_water(a));
+
+    arena_destroy(a);
+}
+
+void test_arena_alloc_beyond_capacity_returns_null(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    void* p;
+    arena_init(&a, 128, (const MacSyscalls*)&f);
+
+    (void)arena_alloc(a, 120);   /* bumps high_water to 120 */
+    p = arena_alloc(a, 16);       /* would bump to 136 > 128 */
+    TEST_ASSERT_NULL(p);
+    TEST_ASSERT_EQUAL_INT(120, arena_high_water(a));
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
+    RUN_TEST(test_arena_alloc_returns_4byte_aligned_pointer);
+    RUN_TEST(test_arena_alloc_beyond_capacity_returns_null);
     return UNITY_END();
 }

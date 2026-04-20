@@ -49,7 +49,19 @@ void arena_destroy(Arena* a) {
 size_t arena_capacity(const Arena* a)   { return a ? a->size : 0; }
 size_t arena_high_water(const Arena* a) { return a ? a->high_water : 0; }
 
+void* arena_alloc(Arena* a, size_t n_bytes) {
+    void* p;
+    if (!a) return 0;
+    /* Round up to 4-byte alignment. 68020+ requires 4-byte alignment
+     * for longword access; we round every allocation up. */
+    n_bytes = (n_bytes + 3u) & ~(size_t)3u;
+    if (a->high_water + n_bytes > a->size) return 0;
+    p = a->base + a->high_water;
+    a->high_water += n_bytes;
+    if (a->high_water > a->max_ever) a->max_ever = a->high_water;
+    return p;
+}
+
 /* Stubs for the rest of the API — fleshed out in later tasks. */
 int  arena_ensure(Arena* a, size_t n) { (void)a; (void)n; return -1; }
-void* arena_alloc(Arena* a, size_t n) { (void)a; (void)n; return 0; }
 void  arena_reset(Arena* a)           { if (a) a->high_water = 0; }
