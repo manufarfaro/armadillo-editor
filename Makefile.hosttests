@@ -30,7 +30,7 @@ FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
 # Test binaries — populated phase by phase as implementations land.
-TESTS := $(BUILDDIR)/arena_test $(BUILDDIR)/doc_test
+TESTS := $(BUILDDIR)/arena_test $(BUILDDIR)/doc_test $(BUILDDIR)/debounce_test
 
 .PHONY: all test clean
 all: $(TESTS)
@@ -54,6 +54,10 @@ $(BUILDDIR)/arena_test: render/arena.c render/arena_test.c $(UNITY) $(FAKES)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 $(BUILDDIR)/doc_test: src/doc.c src/doc_test.c $(UNITY)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/debounce_test: src/debounce.c src/debounce_test.c $(UNITY) $(FAKES)
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
