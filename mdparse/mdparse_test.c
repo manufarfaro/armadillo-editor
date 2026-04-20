@@ -209,6 +209,90 @@ void test_mdparse_blockquote_stamps_quote_depth(void) {
     TEST_ASSERT_TRUE(saw);
 }
 
+void test_mdparse_bold_emits_strong_span(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+    int saw = 0;
+
+    mdparse_run("**bold**", 8, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecSpan &&
+            r.events[i].span_kind == kStyleStrong) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_italic_emits_emph_span(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+    int saw = 0;
+
+    mdparse_run("_italic_", 8, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecSpan &&
+            r.events[i].span_kind == kStyleEmph) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_link_emits_link_span_with_url(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    const char src[] = "[text](http://ex.com)";
+    size_t i;
+    int saw = 0;
+
+    mdparse_run(src, sizeof src - 1, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecSpan &&
+            r.events[i].span_kind == kStyleLink) {
+            TEST_ASSERT_EQUAL_INT(13, r.events[i].link_url_len);
+            TEST_ASSERT_EQUAL_STRING("http://ex.com", r.events[i].link_url);
+            saw = 1;
+        }
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_code_span_emits_code_span(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+    int saw = 0;
+
+    mdparse_run("`x`", 3, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecSpan &&
+            r.events[i].span_kind == kStyleCodeSpan) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_sink_abort_halts_parse(void) {
+    Recorder r = recorder_new();
+    MdParseSink s;
+    int rc;
+    r.abort_on_nth = 1;  /* abort on the first callback */
+    s = recorder_sink(&r);
+    rc = mdparse_run("# Hi", 4, &s, 1);
+    TEST_ASSERT_EQUAL_INT(kMdParseErrSinkAbort, rc);
+}
+
+void test_mdparse_fan_out_to_two_sinks(void) {
+    Recorder r1 = recorder_new();
+    Recorder r2 = recorder_new();
+    MdParseSink sinks[2];
+    sinks[0] = recorder_sink(&r1);
+    sinks[1] = recorder_sink(&r2);
+
+    mdparse_run("hi", 2, sinks, 2);
+
+    TEST_ASSERT_EQUAL_INT(r1.count, r2.count);
+    TEST_ASSERT_TRUE(r1.count > 0);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_mdparse_empty_source_produces_no_events);
@@ -216,6 +300,12 @@ int main(void) {
     RUN_TEST(test_mdparse_paragraph_emits_paragraph_block);
     RUN_TEST(test_mdparse_nested_list_stamps_depth);
     RUN_TEST(test_mdparse_blockquote_stamps_quote_depth);
+    RUN_TEST(test_mdparse_bold_emits_strong_span);
+    RUN_TEST(test_mdparse_italic_emits_emph_span);
+    RUN_TEST(test_mdparse_link_emits_link_span_with_url);
+    RUN_TEST(test_mdparse_code_span_emits_code_span);
+    RUN_TEST(test_mdparse_sink_abort_halts_parse);
+    RUN_TEST(test_mdparse_fan_out_to_two_sinks);
     /* Additional tests added in subsequent tasks. */
     return UNITY_END();
 }
