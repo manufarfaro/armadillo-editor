@@ -18,7 +18,14 @@
 #include "render/arena.h"
 
 void setUp(void) {}
-void tearDown(void) {}
+
+/* Clear the FakeSyscalls singleton between tests. Without this, a
+ * test that forgets to call fake_syscalls_activate inherits the
+ * previous test's (now-stack-gone) pointer and every fake callback
+ * reads freed memory. With this, forgetting activate produces a
+ * visible failure (all callbacks see NULL and return 0 / fail) rather
+ * than silent UB. */
+void tearDown(void) { fake_syscalls_activate(0); }
 
 /* arena_init: allocation + HLock
  * ───────────────────────────────
@@ -219,6 +226,38 @@ void test_arena_reset_alloc_cycle_does_not_allocate_new_handles(void) {
     arena_destroy(a);
 }
 
+/* arena_max_ever: peak high_water since init
+ * ────────────────────────────────────────────
+ * arena_max_ever SHALL return the highest value high_water has ever
+ * reached since arena_init, even across arena_reset calls. Useful for
+ * tuning kArenaInitialSize against the real workload. */
+void test_arena_max_ever_tracks_peak_across_resets(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    arena_init(&a, 4096, (const MacSyscalls*)&f);
+    TEST_ASSERT_EQUAL_INT(0, arena_max_ever(a));
+
+    (void)arena_alloc(a, 1000);
+    TEST_ASSERT_EQUAL_INT(1000, arena_max_ever(a));
+
+    /* Reset clears high_water but NOT max_ever. */
+    arena_reset(a);
+    TEST_ASSERT_EQUAL_INT(0, arena_high_water(a));
+    TEST_ASSERT_EQUAL_INT(1000, arena_max_ever(a));
+
+    /* A smaller allocation in the second cycle doesn't move the peak. */
+    (void)arena_alloc(a, 500);
+    TEST_ASSERT_EQUAL_INT(1000, arena_max_ever(a));
+
+    /* A larger allocation does. */
+    (void)arena_alloc(a, 2000);
+    TEST_ASSERT_EQUAL_INT(2500, arena_max_ever(a));
+
+    arena_destroy(a);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
@@ -230,5 +269,6 @@ int main(void) {
     RUN_TEST(test_arena_reset_clears_watermark_but_preserves_capacity);
     RUN_TEST(test_arena_destroy_disposes_backing_exactly_once);
     RUN_TEST(test_arena_reset_alloc_cycle_does_not_allocate_new_handles);
+    RUN_TEST(test_arena_max_ever_tracks_peak_across_resets);
     return UNITY_END();
 }

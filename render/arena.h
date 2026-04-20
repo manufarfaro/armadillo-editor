@@ -47,4 +47,8 @@ void arena_reset(Arena* a);
 size_t arena_high_water(const Arena* a);
 size_t arena_capacity(const Arena* a);
 
+/* Peak high_water since init. Survives arena_reset — useful for tuning
+ * kArenaInitialSize against the real workload. */
+size_t arena_max_ever(const Arena* a);
+
 #endif /* ARMA_ARENA_H */

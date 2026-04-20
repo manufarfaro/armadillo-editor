@@ -13,7 +13,13 @@ CC       ?= cc
 # can be path-qualified (e.g. `#include "src/mac_syscalls.h"` inside a file
 # under render/). The per-module -I flags below are defense-in-depth for any
 # remaining bare-name includes within a single module.
+#
+# -MMD -MP generates .d files alongside each .o with precise header
+# dependencies. -include pulls them back in so editing a header triggers a
+# rebuild of every object that transitively includes it. Prevents silent
+# stale-object builds as the source tree grows across Plan 1 phases.
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -MMD -MP \
             -I. \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
             -Itest -Ithird_party/unity -Ithird_party/md4c/src
@@ -46,6 +52,10 @@ test: $(TESTS)
 $(BUILDDIR)/arena_test: render/arena.c render/arena_test.c $(UNITY) $(FAKES)
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $^
+
+# Pull in auto-generated header dependency files so editing a header
+# triggers a rebuild of anything that includes it.
+-include $(BUILDDIR)/*.d
 
 clean:
 	rm -rf $(BUILDDIR)

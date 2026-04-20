@@ -52,6 +52,7 @@ void arena_destroy(Arena* a) {
 
 size_t arena_capacity(const Arena* a)   { return a ? a->size : 0; }
 size_t arena_high_water(const Arena* a) { return a ? a->high_water : 0; }
+size_t arena_max_ever(const Arena* a)   { return a ? a->max_ever : 0; }
 
 void* arena_alloc(Arena* a, size_t n_bytes) {
     void* p;
