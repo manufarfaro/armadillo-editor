@@ -170,6 +170,27 @@ void test_arena_reset_clears_watermark_but_preserves_capacity(void) {
     arena_destroy(a);
 }
 
+/* arena_destroy: single DisposeHandle call
+ * ──────────────────────────────────────────
+ * arena_destroy disposes the backing Handle exactly once. No-op on
+ * NULL. Calling it is the only path that ever disposes — destroy is
+ * terminal. */
+void test_arena_destroy_disposes_backing_exactly_once(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+
+    Arena* a = 0;
+    arena_init(&a, 2048, (const MacSyscalls*)&f);
+    TEST_ASSERT_EQUAL_INT(0, f.dispose_handle_calls);
+
+    arena_destroy(a);
+    TEST_ASSERT_EQUAL_INT(1, f.dispose_handle_calls);
+
+    /* NULL is a no-op */
+    arena_destroy(0);
+    TEST_ASSERT_EQUAL_INT(1, f.dispose_handle_calls);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_arena_init_allocates_and_hlocks_backing_handle);
@@ -179,5 +200,6 @@ int main(void) {
     RUN_TEST(test_arena_ensure_grow_failure_preserves_state);
     RUN_TEST(test_arena_ensure_no_op_when_already_sized);
     RUN_TEST(test_arena_reset_clears_watermark_but_preserves_capacity);
+    RUN_TEST(test_arena_destroy_disposes_backing_exactly_once);
     return UNITY_END();
 }
