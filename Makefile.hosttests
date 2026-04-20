@@ -24,7 +24,7 @@ FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
 # Test binaries — populated phase by phase as implementations land.
-TESTS :=
+TESTS := $(BUILDDIR)/arena_test
 
 .PHONY: all test clean
 all: $(TESTS)
@@ -42,6 +42,10 @@ test: $(TESTS)
 	    echo "Summary: $$pass passed, $$fail failed"; \
 	    test $$fail -eq 0; \
 	fi
+
+$(BUILDDIR)/arena_test: render/arena.c render/arena_test.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $^
 
 clean:
 	rm -rf $(BUILDDIR)
