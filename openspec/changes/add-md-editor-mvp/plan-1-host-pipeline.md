@@ -22,7 +22,7 @@
 - Create: `Makefile.hosttests` (host unit-test runner)
 - Create: `armadillo.r` (stub — just enough to produce an `.APPL`)
 - Create: `CLAUDE.md`, `README.md` (short; expanded in Plan 2)
-- Create: `test/unity/unity.c`, `test/unity/unity.h`, `test/unity/unity_internals.h` (vendored)
+- Create: `third_party/unity/unity.c`, `third_party/unity/unity.h`, `third_party/unity/unity_internals.h` (vendored)
 - Create: `third_party/md4c/src/md4c.c`, `third_party/md4c/src/md4c.h`, `third_party/md4c/COMMIT.txt`, `third_party/md4c/README.md` (vendored)
 
 ### Public headers
@@ -248,12 +248,12 @@ the first runnable .APPL.
 ### Task 3: Create directory skeleton
 
 **Files:**
-- Create (empty): `src/`, `src_pane/`, `render/`, `mdparse/`, `scanner/`, `test/`, `test/unity/`, `third_party/`, `third_party/md4c/`, `third_party/md4c/src/`
+- Create (empty): `src/`, `src_pane/`, `render/`, `mdparse/`, `scanner/`, `test/`, `third_party/`, `third_party/unity/`, `third_party/md4c/`, `third_party/md4c/src/`
 
 - [ ] **Step 3.1: Create the module directories**
 
 ```bash
-mkdir -p src src_pane render mdparse scanner test/unity third_party/md4c/src
+mkdir -p src src_pane render mdparse scanner test third_party/unity third_party/md4c/src
 ```
 
 - [ ] **Step 3.2: Add placeholder files so git tracks the empty dirs**
@@ -262,9 +262,9 @@ Create `.gitkeep` files in each otherwise-empty directory:
 
 ```bash
 touch src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep \
-      scanner/.gitkeep test/.gitkeep test/unity/.gitkeep \
-      third_party/.gitkeep third_party/md4c/.gitkeep \
-      third_party/md4c/src/.gitkeep
+      scanner/.gitkeep test/.gitkeep \
+      third_party/.gitkeep third_party/unity/.gitkeep \
+      third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
 ```
 
 (Each `.gitkeep` will be deleted organically as its directory gains real files.)
@@ -272,7 +272,7 @@ touch src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep \
 - [ ] **Step 3.3: Verify the tree**
 
 ```bash
-ls -la src src_pane render mdparse scanner test test/unity third_party third_party/md4c third_party/md4c/src
+ls -la src src_pane render mdparse scanner test third_party third_party/unity third_party/md4c third_party/md4c/src
 ```
 
 Expected: each directory exists and contains a `.gitkeep`.
@@ -280,7 +280,7 @@ Expected: each directory exists and contains a `.gitkeep`.
 - [ ] **Step 3.4: Stage and commit**
 
 ```bash
-git add src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep scanner/.gitkeep test/.gitkeep test/unity/.gitkeep third_party/.gitkeep third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
+git add src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep scanner/.gitkeep test/.gitkeep third_party/.gitkeep third_party/unity/.gitkeep third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
 ```
 
 Then `git-commit` with message:
@@ -288,9 +288,10 @@ Then `git-commit` with message:
 ```
 Add module directory skeleton
 
-Create src/, src_pane/, render/, mdparse/, scanner/, test/unity/, and
-third_party/md4c/src/. Each holds a .gitkeep placeholder that gets
-removed organically as real files land.
+Create src/, src_pane/, render/, mdparse/, scanner/, test/,
+third_party/unity/, and third_party/md4c/src/. Each holds a
+.gitkeep placeholder that gets removed organically as real files
+land.
 ```
 
 ---
@@ -298,9 +299,9 @@ removed organically as real files land.
 ### Task 4: Vendor Unity test framework
 
 **Files:**
-- Create: `test/unity/unity.c`, `test/unity/unity.h`, `test/unity/unity_internals.h`
-- Delete: `test/unity/.gitkeep` (replaced by real files)
-- Create: `test/unity/README.md` (records version + license)
+- Create: `third_party/unity/unity.c`, `third_party/unity/unity.h`, `third_party/unity/unity_internals.h`
+- Delete: `third_party/unity/.gitkeep` (replaced by real files)
+- Create: `third_party/unity/README.md` (records version + license)
 
 Unity is a small C unit-test framework (https://github.com/ThrowTheSwitch/Unity). Use a pinned tagged release for reproducibility.
 
@@ -316,14 +317,14 @@ tar -xzf v2.6.1.tar.gz
 
 ```bash
 cd /Users/manufarfaro/Documents/Projects/armadillo-editor
-cp /tmp/Unity-2.6.1/src/unity.c         test/unity/unity.c
-cp /tmp/Unity-2.6.1/src/unity.h         test/unity/unity.h
-cp /tmp/Unity-2.6.1/src/unity_internals.h  test/unity/unity_internals.h
-cp /tmp/Unity-2.6.1/LICENSE.txt        test/unity/LICENSE.txt
-rm test/unity/.gitkeep
+cp /tmp/Unity-2.6.1/src/unity.c         third_party/unity/unity.c
+cp /tmp/Unity-2.6.1/src/unity.h         third_party/unity/unity.h
+cp /tmp/Unity-2.6.1/src/unity_internals.h  third_party/unity/unity_internals.h
+cp /tmp/Unity-2.6.1/LICENSE.txt        third_party/unity/LICENSE.txt
+rm third_party/unity/.gitkeep
 ```
 
-- [ ] **Step 4.3: Create `test/unity/README.md`**
+- [ ] **Step 4.3: Create `third_party/unity/README.md`**
 
 ```markdown
 # Unity — vendored
@@ -352,7 +353,7 @@ Upstream: https://github.com/ThrowTheSwitch/Unity
 - [ ] **Step 4.4: Verify Unity compiles standalone**
 
 ```bash
-cc -std=c89 -Wall -c test/unity/unity.c -o /tmp/unity_check.o
+cc -std=c89 -Wall -c third_party/unity/unity.c -o /tmp/unity_check.o
 ```
 
 Expected: exit 0, no warnings. (If Unity's headers use features beyond C89 — some versions do — bump to `-std=c99` in the Makefile later but keep project code C89-compatible.)
@@ -362,9 +363,9 @@ Delete the check artifact: `rm /tmp/unity_check.o`.
 - [ ] **Step 4.5: Stage and commit**
 
 ```bash
-git add test/unity/unity.c test/unity/unity.h test/unity/unity_internals.h \
-        test/unity/LICENSE.txt test/unity/README.md
-git rm test/unity/.gitkeep
+git add third_party/unity/unity.c third_party/unity/unity.h third_party/unity/unity_internals.h \
+        third_party/unity/LICENSE.txt third_party/unity/README.md
+git rm third_party/unity/.gitkeep
 ```
 
 Then `git-commit` with message:
@@ -376,7 +377,7 @@ Unity provides a minimal C unit-test framework with TEST_ASSERT_*
 macros. Pinned at tag v2.6.1 so upgrades are deliberate. MIT-licensed;
 LICENSE.txt carried alongside the source.
 
-Standard vendoring flow lives in test/unity/README.md.
+Standard vendoring flow lives in third_party/unity/README.md.
 ```
 
 ---
@@ -507,8 +508,10 @@ Just enough resources to let CMakeLists.txt produce an `.APPL`. Real menus, aler
 
 #include "Types.r"
 
-/* Size flags the app needs — small heap + accepts suspend/resume events.
- * 2MB is a safe MVP stack + heap floor; tune later if needed. */
+/* Size Manager resource.
+ * 2 MB preferred / 1 MB minimum — MVP stub sizing; Plan 2 tunes
+ * against real arena + TE footprints. 32-bit clean for 68030+ hosts
+ * (no 24-bit addressing assumed). */
 resource 'SIZE' (-1) {
     reserved,
     acceptSuspendResumeEvents,
@@ -518,7 +521,7 @@ resource 'SIZE' (-1) {
     backgroundAndForeground,
     dontGetFrontClicks,
     ignoreChildDiedEvents,
-    not32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
+    is32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
     isHighLevelEventAware,
     localAndRemoteHLEvents,
     notStationeryAware,
@@ -561,7 +564,7 @@ At this point we only have `armadillo.r` and vendored md4c. The stub lets Retro6
 - [ ] **Step 7.1: Create `CMakeLists.txt`**
 
 ```cmake
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 project(ArmadilloEditor C)
 
 #
@@ -589,6 +592,9 @@ set(MD4C_SOURCES ${MD4C_DIR}/md4c.c)
 # The app target. Source list is incremental — modules are added as
 # they're implemented across Plan 1 and Plan 2.
 add_application(ArmadilloEditor
+    # Phase 1 stub main (replaced by src/app.c in Plan 2)
+    src/stub_main.c
+
     # Renderer + pipeline (Plan 1 modules land here)
     # render/arena.c
     # render/render.c
@@ -598,7 +604,7 @@ add_application(ArmadilloEditor
     # src/debounce.c
     # src/file_io.c
 
-    # App shell (Plan 2 adds these)
+    # App shell (Plan 2 replaces stub_main.c with these)
     # src/app.c
     # src/menus.c
     # src/win_editor.c
@@ -621,19 +627,40 @@ target_include_directories(ArmadilloEditor PRIVATE
     third_party/md4c/src
 )
 
-# 68030+ target floor; no 68040-only instructions.
-target_compile_definitions(ArmadilloEditor PRIVATE
-    kArmadilloTargetFloor=68030
-)
-
-# md4c defines — keep parser conservative for 68030 perf.
+# md4c defines.
+# MD4C_USE_ASCII=1 — disables md4c's Unicode word-class tables
+# (trades ~few-KB lookups for a byte compare per char on a 25 MHz
+# target). Input is still parsed byte-for-byte; it's only word-
+# boundary detection inside spans that becomes ASCII-only.
+# MacRoman / UTF-8 documents still round-trip cleanly.
 target_compile_definitions(ArmadilloEditor PRIVATE
     MD4C_USE_ASCII=1
 )
 
-set_target_properties(ArmadilloEditor PROPERTIES
-    COMPILE_OPTIONS -ffunction-sections
-    LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single"
+# Compile options.
+# -ffunction-sections + -Wl,-gc-sections lets the linker drop
+# unreferenced functions (smaller .APPL).
+# -Os optimizes for size — critical on 25 MHz 68030 with tight RAM.
+# -Wall catches common bugs; md4c gets -w below because we don't
+# own its source and its warnings are not our problem.
+# TODO (Plan 2): decide whether to add -mcpu=68020 or -mcpu=68030.
+# Default (no -mcpu) compiles for gcc's 68000 baseline, which
+# loses any 68020+ optimizations but is maximally conservative.
+# Add -mcpu=... once we want to commit to the CPU floor in code.
+target_compile_options(ArmadilloEditor PRIVATE
+    -ffunction-sections
+    -Os
+    -Wall
+)
+
+# Suppress warnings on vendored md4c — we don't own its source.
+set_source_files_properties(${MD4C_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-w"
+)
+
+target_link_options(ArmadilloEditor PRIVATE
+    "LINKER:-gc-sections"
+    "LINKER:--mac-single"
 )
 ```
 
@@ -684,10 +711,10 @@ At this stage the target list is empty; each phase adds its own rule.
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
-            -Itest -Itest/unity -Ithird_party/md4c/src
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
 BUILDDIR := build_hosttests
 
-UNITY    := test/unity/unity.c
+UNITY    := third_party/unity/unity.c
 FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
@@ -5712,7 +5739,7 @@ jobs:
 
       - name: Run cppcheck on project sources
         run: |
-          # Only our code — not vendored third_party or test/unity.
+          # Only our code — not vendored third_party.
           cppcheck \
             --enable=warning,style,performance,portability \
             --std=c89 \
@@ -5740,7 +5767,6 @@ jobs:
           find src src_pane render mdparse scanner \
                -name '*.c' -o -name '*.h' \
             | grep -v 'third_party/' \
-            | grep -v 'test/unity/' \
             | xargs clang-format --dry-run --Werror
 ```
 
@@ -5768,7 +5794,7 @@ C89 as the dialect; findings fail the job. clang-format --dry-run
 Chromium's preset with ColumnLimit=88 and sort-includes off (C89
 include order matters for Toolbox headers).
 
-Neither check runs against third_party/ or test/unity/.
+Neither check runs against third_party/.
 ```
 
 ---
