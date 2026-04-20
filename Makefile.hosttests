@@ -30,7 +30,7 @@ FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
 # Test binaries — populated phase by phase as implementations land.
-TESTS := $(BUILDDIR)/arena_test $(BUILDDIR)/doc_test $(BUILDDIR)/debounce_test $(BUILDDIR)/mdparse_test $(BUILDDIR)/scanner_test
+TESTS := $(BUILDDIR)/arena_test $(BUILDDIR)/doc_test $(BUILDDIR)/debounce_test $(BUILDDIR)/mdparse_test $(BUILDDIR)/scanner_test $(BUILDDIR)/render_test
 
 .PHONY: all test clean
 all: $(TESTS)
@@ -66,6 +66,10 @@ $(BUILDDIR)/mdparse_test: mdparse/mdparse.c mdparse/mdparse_test.c third_party/m
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 $(BUILDDIR)/scanner_test: scanner/scanner.c scanner/scanner_test.c render/arena.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/render_test: render/render.c render/render_test.c render/arena.c $(UNITY) $(FAKES) $(RECORDER)
 	@mkdir -p $(BUILDDIR)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
