@@ -298,6 +298,144 @@ void test_render_layout_h1_uses_chicago_17_bold(void) {
     }
 }
 
+void test_render_layout_bold_run_wraps_with_set_font_calls(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        int saw_bold_font = 0;
+        size_t i;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr);
+        sink->on_block_open(sink->ctx, kBlockParagraph, &attr);
+        sink->on_text(sink->ctx, "plain bold rest", 15, 0);
+        sink->on_span(sink->ctx, kStyleStrong, 6, 4, 0, 0);
+        sink->on_block_close(sink->ctx, kBlockParagraph);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        /* Expect at least 3 draw_text calls: "plain ", "bold", " rest". */
+        TEST_ASSERT_TRUE(count_ops(&r, kRecDrawText) >= 3);
+
+        for (i = 0; i < r.count; i++) {
+            if (r.calls[i].op == kRecSetFont &&
+                (r.calls[i].font_face & 0x01)) saw_bold_font = 1;
+        }
+        TEST_ASSERT_TRUE(saw_bold_font);
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
+void test_render_layout_hr_emits_a_line(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr);
+        sink->on_block_open(sink->ctx, kBlockHr, &attr);
+        sink->on_block_close(sink->ctx, kBlockHr);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        TEST_ASSERT_EQUAL_INT(1, count_ops(&r, kRecLine));
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
+void test_render_layout_list_item_draws_bullet_and_text(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr); attr.list_depth = 1;
+        sink->on_block_open(sink->ctx, kBlockListItem, &attr);
+        sink->on_text(sink->ctx, "item", 4, 0);
+        sink->on_block_close(sink->ctx, kBlockListItem);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        /* Two draw_text calls: bullet "*" and text "item". */
+        TEST_ASSERT_TRUE(count_ops(&r, kRecDrawText) >= 2);
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
+void test_render_layout_blockquote_draws_vertical_bar(void) {
+    FakeSyscalls f = fake_syscalls_init();
+    fake_syscalls_activate(&f);
+    {
+        Arena* a = 0;
+        RenderModel* m;
+        const MdParseSink* sink;
+        BlockAttrs attr;
+        Recorder r;
+        DrawContext ctx;
+        LayoutParams p;
+        arena_init(&a, 4096, (const MacSyscalls*)&f);
+        m = render_model_new(a);
+        sink = render_model_sink(m);
+
+        memset(&attr, 0, sizeof attr); attr.quote_depth = 1;
+        sink->on_block_open(sink->ctx, kBlockBlockQuote, &attr);
+        sink->on_text(sink->ctx, "quoted", 6, 0);
+        sink->on_block_close(sink->ctx, kBlockBlockQuote);
+
+        memset(&r, 0, sizeof r);
+        ctx = recorder_context(&r);
+        p = layout_params_defaults();
+        render_layout_and_draw(m, &p, &ctx);
+
+        TEST_ASSERT_EQUAL_INT(1, count_ops(&r, kRecLine));
+
+        recorder_free(&r);
+        arena_destroy(a);
+    }
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_render_model_empty_has_zero_blocks);
@@ -310,5 +448,9 @@ int main(void) {
     RUN_TEST(test_render_layout_empty_model_emits_nothing);
     RUN_TEST(test_render_layout_single_paragraph_draws_text);
     RUN_TEST(test_render_layout_h1_uses_chicago_17_bold);
+    RUN_TEST(test_render_layout_bold_run_wraps_with_set_font_calls);
+    RUN_TEST(test_render_layout_hr_emits_a_line);
+    RUN_TEST(test_render_layout_list_item_draws_bullet_and_text);
+    RUN_TEST(test_render_layout_blockquote_draws_vertical_bar);
     return UNITY_END();
 }
