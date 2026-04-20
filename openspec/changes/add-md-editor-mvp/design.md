@@ -777,11 +777,11 @@ armadillo-editor/
 │   ├── scanner.c/h
 │   └── scanner_test.c
 ├── test/
-│   ├── unity/                    # vendored Unity test framework
-│   ├── fake_syscalls.c/h
-│   └── recorder.c/h
-├── third_party/
-│   └── md4c/                     # vendored at pinned commit
+│   ├── fake_syscalls.c/h         # our own test internals
+│   └── recorder.c/h              # our own test internals
+├── third_party/                  # vendored deps (at pinned versions)
+│   ├── md4c/
+│   └── unity/
 ├── armadillo.r                   # menus, WIND, ALRT, DLOG, DITL, STR#, icons
 ├── CMakeLists.txt
 ├── Makefile.hosttests
@@ -798,8 +798,8 @@ armadillo-editor/
 ### 7.2 CMakeLists.txt (cross-compile for 68k)
 
 ```cmake
-cmake_minimum_required(VERSION 3.9)
-project(ArmadilloEditor)
+cmake_minimum_required(VERSION 3.15)
+project(ArmadilloEditor C)
 
 set(MD4C_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/md4c/src)
 set(MD4C_SOURCES ${MD4C_DIR}/md4c.c)
@@ -826,12 +826,17 @@ target_include_directories(ArmadilloEditor PRIVATE
 )
 
 target_compile_definitions(ArmadilloEditor PRIVATE
-    kArmadilloTargetFloor=68030
+    MD4C_USE_ASCII=1
 )
 
-set_target_properties(ArmadilloEditor PROPERTIES
-    COMPILE_OPTIONS -ffunction-sections
-    LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single"
+target_compile_options(ArmadilloEditor PRIVATE
+    -ffunction-sections -Os -Wall
+)
+set_source_files_properties(${MD4C_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-w"
+)
+target_link_options(ArmadilloEditor PRIVATE
+    "LINKER:-gc-sections" "LINKER:--mac-single"
 )
 
 # Separate .APPL for on-device smoke test
