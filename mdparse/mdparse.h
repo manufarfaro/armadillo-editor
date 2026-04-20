@@ -9,8 +9,8 @@
 #define ARMA_MDPARSE_H
 
 #include <stddef.h>
-#include "blocks.h"
-#include "inlines.h"
+#include "render/blocks.h"
+#include "render/inlines.h"
 
 typedef struct BlockAttrs {
     unsigned char h_level;       /* 1..6 for kBlockHeading, 0 otherwise */

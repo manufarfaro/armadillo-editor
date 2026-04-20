@@ -9,9 +9,9 @@
 #define ARMA_SCANNER_H
 
 #include <stddef.h>
-#include "arena.h"
-#include "inlines.h"
-#include "mdparse.h"
+#include "render/arena.h"
+#include "render/inlines.h"
+#include "mdparse/mdparse.h"
 
 typedef struct Scanner Scanner;    /* opaque */
 

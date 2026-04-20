@@ -710,6 +710,7 @@ At this stage the target list is empty; each phase adds its own rule.
 
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -I. \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
             -Itest -Ithird_party/unity -Ithird_party/md4c/src
 BUILDDIR := build_hosttests
@@ -1085,7 +1086,7 @@ StyleKind covers the inline-run types scanner and render share
 #define ARMA_ARENA_H
 
 #include <stddef.h>
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct Arena Arena;    /* opaque */
 
@@ -1336,8 +1337,8 @@ Forward-declares MdParseSink (no include) to avoid dependency cycles.
 #define ARMA_MDPARSE_H
 
 #include <stddef.h>
-#include "blocks.h"
-#include "inlines.h"
+#include "render/blocks.h"
+#include "render/inlines.h"
 
 typedef struct BlockAttrs {
     unsigned char h_level;       /* 1..6 for kBlockHeading, 0 otherwise */
@@ -1423,9 +1424,9 @@ list_ordered to on_block_open.
 #define ARMA_SCANNER_H
 
 #include <stddef.h>
-#include "arena.h"
-#include "inlines.h"
-#include "mdparse.h"
+#include "render/arena.h"
+#include "render/inlines.h"
+#include "mdparse/mdparse.h"
 
 typedef struct Scanner Scanner;    /* opaque */
 
@@ -1504,8 +1505,8 @@ Vendor-free header — no TE types. Internals are Plan 2's territory.
 #define ARMA_SRC_PANE_H
 
 #include <stddef.h>
-#include "inlines.h"
-#include "mac_syscalls.h"
+#include "render/inlines.h"
+#include "src/mac_syscalls.h"
 
 typedef struct SrcPaneParams {
     short left;
@@ -1811,7 +1812,7 @@ Every host test that needs Toolbox fakes includes this. Default behavior is "all
 #ifndef ARMA_FAKE_SYSCALLS_H
 #define ARMA_FAKE_SYSCALLS_H
 
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct FakeSyscalls {
     MacSyscalls vtable;   /* MUST be first — callers cast &fake.vtable */

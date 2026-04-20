@@ -9,7 +9,12 @@
 # Clean: make -f Makefile.hosttests clean
 
 CC       ?= cc
+# -I. puts the repo root on the include search path so cross-module headers
+# can be path-qualified (e.g. `#include "src/mac_syscalls.h"` inside a file
+# under render/). The per-module -I flags below are defense-in-depth for any
+# remaining bare-name includes within a single module.
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -I. \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
             -Itest -Ithird_party/unity -Ithird_party/md4c/src
 BUILDDIR := build_hosttests

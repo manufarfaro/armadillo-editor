@@ -14,7 +14,7 @@
 #define ARMA_ARENA_H
 
 #include <stddef.h>
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct Arena Arena;    /* opaque */
 

@@ -16,8 +16,8 @@
 #define ARMA_SRC_PANE_H
 
 #include <stddef.h>
-#include "inlines.h"
-#include "mac_syscalls.h"
+#include "render/inlines.h"
+#include "src/mac_syscalls.h"
 
 typedef struct SrcPaneParams {
     short left;

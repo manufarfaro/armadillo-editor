@@ -8,7 +8,7 @@
 #ifndef ARMA_FAKE_SYSCALLS_H
 #define ARMA_FAKE_SYSCALLS_H
 
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct FakeSyscalls {
     MacSyscalls vtable;   /* MUST be first — callers cast &fake.vtable */

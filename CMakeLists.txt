@@ -53,6 +53,7 @@ add_application(ArmadilloEditor
 )
 
 target_include_directories(ArmadilloEditor PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}    # repo root — cross-module path-qualified includes
     src
     src_pane
     render
