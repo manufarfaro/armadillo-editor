@@ -2,7 +2,6 @@
 
 [![host-tests](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml)
 [![lint](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml)
-[![codeql](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml)
 [![release](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml)
 
 A System 7 markdown editor for 68030-and-up classic Macintosh. Cross-compiled with [Retro68](https://github.com/autc04/Retro68).
@@ -18,7 +17,7 @@ Current status: **pre-MVP** — the repo holds the PRD, OpenSpec change, capabil
 - `third_party/md4c/` — vendored markdown parser at a pinned commit
 - `third_party/unity/` — vendored test framework
 - `test/` — our own test internals (fakes, recorder)
-- `.github/workflows/` — CI workflows (host-tests, lint, codeql, release)
+- `.github/workflows/` — CI workflows (host-tests, lint, release); CodeQL runs via GitHub's Default Setup (see Security tab)
 
 ## Build
 
@@ -60,12 +59,13 @@ docker run --rm -v "$PWD":/work -w /work ghcr.io/autc04/retro68:latest bash -lc 
 
 ## CI
 
-Every push and PR runs four workflows:
+Every push and PR runs three workflows:
 
 - **host-tests** (~1 min) — Unity-based unit tests on ubuntu-latest
 - **lint** (~30 s) — cppcheck (warnings/style/performance/portability, C89) + clang-format check
-- **codeql** (~3 min) — CodeQL static analysis on the host build, security-and-quality suite
 - **release** (~5 min) — Retro68 cross-compile via `ghcr.io/autc04/retro68`; uploads `.APPL` and `.dsk` as workflow artifacts (14-day retention)
+
+CodeQL static analysis runs via GitHub's [Default Setup for Code Scanning](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning) (configured in repo Settings → Code security → Code scanning). Results appear in the Security tab. No workflow file needed — GitHub manages the queries and build detection.
 
 Tag pushes matching `v*` / `mvp-*` / `tier-*` additionally create a GitHub Release with the `.APPL` and `.dsk` attached.
 

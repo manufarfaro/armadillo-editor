@@ -56,8 +56,8 @@
 - Create: `.clang-format`
 - Create: `.github/workflows/host-tests.yml`
 - Create: `.github/workflows/lint.yml`
-- Create: `.github/workflows/codeql.yml`
 - Create: `.github/workflows/release.yml`
+- Configure (outside the repo): CodeQL via GitHub's Default Setup in repo Settings → Code security → Code scanning
 - Modify: `README.md` (full MVP version replaces the Task 2 stub — adds badges + CI section + Docker cross-compile instructions)
 
 ### Not created in this plan (Plan 2)
@@ -101,7 +101,7 @@ Phases group related tasks into natural deliverable boundaries. After each phase
 7. **Phase 7 — Scanner** (Tasks 38–39): style-run producer from sink events.
 8. **Phase 8 — Render** (Tasks 40–44): flat-block model construction + layout + draw via `DrawOps`. Largest phase.
 9. **Phase 9 — File I/O** (host parts, Task 45): open/save data paths with `FakeSyscalls`.
-10. **Phase 10 — CI & GitHub delivery** (Tasks 46–50): four GitHub Actions workflows (host-tests, lint, codeql, release) + `.clang-format` + README badges. Uses `ghcr.io/autc04/retro68` for the cross-build job.
+10. **Phase 10 — CI & GitHub delivery** (Tasks 46–50): three GitHub Actions workflows (host-tests, lint, release) + `.clang-format` + README badges + CodeQL via GitHub's Default Setup. Uses `ghcr.io/autc04/retro68` for the cross-build job.
 11. **Phase 11 — Final verification** (Task 51): full suite, spec-coverage audit, tag `plan-1-complete`.
 
 Each task below is atomic — it starts with a clean working tree (except the commit-in-progress staging) and ends with a clean working tree after its commit step.
@@ -5800,82 +5800,21 @@ Neither check runs against third_party/.
 
 ---
 
-### Task 48: CodeQL workflow
+### Task 48: CodeQL via GitHub Default Setup (no workflow file)
 
-**Files:**
-- Create: `.github/workflows/codeql.yml`
+**Files:** none (configuration lives in GitHub repo settings, not in the repo).
 
-GitHub's CodeQL static analysis on the host build. Covers portable C code (all of render, mdparse, scanner, doc, debounce, file_io data-path, arena). Cross-build is deliberately NOT analyzed here — CodeQL would need the cross-toolchain in CodeQL's build mode, which adds complexity without meaningful extra signal since the cross and host compile the same module sources.
+CodeQL static analysis is enabled through GitHub's [Default Setup for Code Scanning](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning). No workflow YAML to maintain; GitHub manages query suites and build detection automatically. Results surface on the repository's Security tab.
 
-- [ ] **Step 48.1: Create `.github/workflows/codeql.yml`**
+Default Setup runs the same CodeQL engine and query suites an advanced workflow would use. Given the project's plain-C Makefile build and lack of custom queries, there's no benefit to maintaining a hand-written workflow — upgrades to `github/codeql-action` versions, CodeQL pack versions, and query additions all happen without our involvement.
 
-```yaml
-name: codeql
+- [ ] **Step 48.1: Enable Default Setup in GitHub UI**
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Weekly full-history scan to catch issues as CodeQL's queries evolve.
-    - cron: '17 6 * * 1'
+Repository Settings → Code security → Code scanning → *Default* → Enable.
 
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+- [ ] **Step 48.2: No commit**
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'c-cpp' ]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          queries: +security-and-quality
-
-      - name: Build (host)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-          make -f Makefile.hosttests all
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{ matrix.language }}"
-```
-
-- [ ] **Step 48.2: Commit**
-
-```bash
-git add .github/workflows/codeql.yml
-```
-
-Then `git-commit` with message:
-
-```
-Add CodeQL workflow for static analysis
-
-Runs on push/PR plus weekly schedule. Analyzes the host build (all
-portable modules). Uses the security-and-quality suite for a broader
-net than the default security-only queries. Results post to the
-Security tab; findings don't fail the workflow by default.
-
-Cross-build is not analyzed here — it would need the Retro68
-toolchain inside the CodeQL build step, adding significant complexity
-without meaningful additional signal (cross and host compile the
-same .c files).
-```
+This step touches no repo files. Skip directly to Task 49.
 
 ---
 
