@@ -293,6 +293,72 @@ void test_mdparse_fan_out_to_two_sinks(void) {
     TEST_ASSERT_TRUE(r1.count > 0);
 }
 
+void test_mdparse_html_block_emits_block_html(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    const char src[] = "<aside>hi</aside>\n";
+    size_t i;
+    int saw = 0;
+
+    mdparse_run(src, sizeof src - 1, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockHtml) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_fenced_code_emits_code_block(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    const char src[] = "```\nfoo\n```\n";
+    size_t i;
+    int saw = 0;
+
+    mdparse_run(src, sizeof src - 1, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockCodeBlock) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_horizontal_rule_emits_block_hr(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+    int saw = 0;
+
+    mdparse_run("---\n", 4, &s, 1);
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockHr) saw = 1;
+    }
+    TEST_ASSERT_TRUE(saw);
+}
+
+void test_mdparse_second_call_is_independent(void) {
+    Recorder r = recorder_new();
+    MdParseSink s = recorder_sink(&r);
+    size_t i;
+
+    mdparse_run("- x\n", 4, &s, 1);
+    /* Fresh recorder + sink for a second-call test on the same
+     * dispatcher internals. If mdparse_run leaked list_depth state
+     * across invocations, this paragraph would erroneously get
+     * list_depth > 0. */
+    r = recorder_new();
+    s = recorder_sink(&r);
+    mdparse_run("text\n", 5, &s, 1);
+
+    for (i = 0; i < r.count; i++) {
+        if (r.events[i].kind == kRecBlockOpen &&
+            r.events[i].block_kind == kBlockParagraph) {
+            TEST_ASSERT_EQUAL_INT(0, r.events[i].attrs.list_depth);
+        }
+    }
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_mdparse_empty_source_produces_no_events);
@@ -306,6 +372,9 @@ int main(void) {
     RUN_TEST(test_mdparse_code_span_emits_code_span);
     RUN_TEST(test_mdparse_sink_abort_halts_parse);
     RUN_TEST(test_mdparse_fan_out_to_two_sinks);
-    /* Additional tests added in subsequent tasks. */
+    RUN_TEST(test_mdparse_html_block_emits_block_html);
+    RUN_TEST(test_mdparse_fenced_code_emits_code_block);
+    RUN_TEST(test_mdparse_horizontal_rule_emits_block_hr);
+    RUN_TEST(test_mdparse_second_call_is_independent);
     return UNITY_END();
 }
