@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 project(ArmadilloEditor C)
 
 #
@@ -61,17 +61,38 @@ target_include_directories(ArmadilloEditor PRIVATE
     third_party/md4c/src
 )
 
-# 68030+ target floor; no 68040-only instructions.
-target_compile_definitions(ArmadilloEditor PRIVATE
-    kArmadilloTargetFloor=68030
-)
-
-# md4c defines — keep parser conservative for 68030 perf.
+# md4c defines.
+# MD4C_USE_ASCII=1 — disables md4c's Unicode word-class tables
+# (trades ~few-KB lookups for a byte compare per char on a 25 MHz
+# target). Input is still parsed byte-for-byte; it's only word-
+# boundary detection inside spans that becomes ASCII-only.
+# MacRoman / UTF-8 documents still round-trip cleanly.
 target_compile_definitions(ArmadilloEditor PRIVATE
     MD4C_USE_ASCII=1
 )
 
-set_target_properties(ArmadilloEditor PROPERTIES
-    COMPILE_OPTIONS -ffunction-sections
-    LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single"
+# Compile options.
+# -ffunction-sections + -Wl,-gc-sections lets the linker drop
+# unreferenced functions (smaller .APPL).
+# -Os optimizes for size — critical on 25 MHz 68030 with tight RAM.
+# -Wall catches common bugs; md4c gets -w below because we don't
+# own its source and its warnings are not our problem.
+# TODO (Plan 2): decide whether to add -mcpu=68020 or -mcpu=68030.
+# Default (no -mcpu) compiles for gcc's 68000 baseline, which
+# loses any 68020+ optimizations but is maximally conservative.
+# Add -mcpu=... once we want to commit to the CPU floor in code.
+target_compile_options(ArmadilloEditor PRIVATE
+    -ffunction-sections
+    -Os
+    -Wall
+)
+
+# Suppress warnings on vendored md4c — we don't own its source.
+set_source_files_properties(${MD4C_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-w"
+)
+
+target_link_options(ArmadilloEditor PRIVATE
+    "LINKER:-gc-sections"
+    "LINKER:--mac-single"
 )
