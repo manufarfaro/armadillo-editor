@@ -189,6 +189,13 @@ FakeSyscalls fake_syscalls_init(void) {
     return f;
 }
 
+/* Bind `f` as the currently-active fake. Callers pass a stack-local
+ * FakeSyscalls whose address lives as long as the enclosing test
+ * function; `g_current` MUST NOT outlive that scope, which is why
+ * every test's tearDown calls fake_syscalls_activate(0) to unbind.
+ * CodeQL flags the parameter-to-file-static assignment as a "stack
+ * address stored in non-local memory" smell — that's the singleton
+ * pattern described at the top of this file, not a bug. */
 void fake_syscalls_activate(FakeSyscalls* f) {
     g_current = f;
 }

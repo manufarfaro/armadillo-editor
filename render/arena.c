@@ -35,6 +35,12 @@ int arena_init(Arena** out, size_t initial_size, const MacSyscalls* sys) {
     a->size       = initial_size;
     a->high_water = 0;
     a->max_ever   = 0;
+    /* Caller contract: `sys` must outlive the Arena. Production wires
+     * a file-scope MacSyscalls in src/app.c; tests pass a stack-local
+     * FakeSyscalls that outlives every arena use in its enclosing
+     * test function. CodeQL flags this as "stack address in non-local
+     * memory" — that alert is a known false-positive under our
+     * lifetime contract. */
     a->sys        = sys;
 
     *out = a;

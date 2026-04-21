@@ -110,7 +110,7 @@ DrawContext recorder_context(Recorder* r) {
 
 void recorder_free(Recorder* r) {
     if (!r) return;
-    if (r->calls) free(r->calls);
+    free(r->calls);   /* free(NULL) is a no-op per C89; no guard needed */
     r->calls = 0;
     r->count = 0;
     r->capacity = 0;

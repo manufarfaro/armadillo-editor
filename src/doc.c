@@ -33,7 +33,7 @@ Doc* doc_new(void) {
 
 void doc_free(Doc* d) {
     if (!d) return;
-    if (d->text_buf) free(d->text_buf);
+    free(d->text_buf);   /* free(NULL) is a no-op per C89; no guard needed */
     free(d);
 }
 
