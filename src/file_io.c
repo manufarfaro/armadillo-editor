@@ -20,11 +20,13 @@
 /* ---------- Target-only stubs (Plan 2 replaces these) ---------- */
 
 int file_io_open_interactive(Doc** out_doc, const MacSyscalls* sys) {
+    /* sys is per-call; not retained. */
     (void)out_doc; (void)sys;
     return kFileIoErrCancel;
 }
 
 int file_io_save_as(Doc* d, const MacSyscalls* sys) {
+    /* sys is per-call; not retained. */
     (void)d; (void)sys;
     return kFileIoErrCancel;
 }
@@ -33,6 +35,7 @@ int file_io_save_as(Doc* d, const MacSyscalls* sys) {
 
 int file_io_open(const void* fsspec_opaque, Doc** out_doc,
                  const MacSyscalls* sys) {
+    /* sys is per-call; not retained. */
     int rc = kFileIoOk;
     short ref = 0;
     int ref_open = 0;
@@ -76,6 +79,7 @@ cleanup:
 }
 
 int file_io_save(Doc* d, const MacSyscalls* sys) {
+    /* sys is per-call; not retained. */
     unsigned char fn_len = 0;
     const char* fn;
 
