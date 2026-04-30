@@ -12,12 +12,12 @@
 #define kArenaHardCap      (512u * 1024u)
 
 struct Arena {
-    void*              backing;         /* Handle (void**) */
-    char*              base;            /* = *backing while HLocked */
-    size_t             size;
-    size_t             high_water;
-    size_t             max_ever;
-    const MacSyscalls* sys;
+    void*       backing;         /* Handle (void**) */
+    char*       base;            /* = *backing while HLocked */
+    size_t      size;
+    size_t      high_water;
+    size_t      max_ever;
+    MacSyscalls sys;             /* by-value copy taken at arena_init */
 };
 
 int arena_init(Arena** out, size_t initial_size, const MacSyscalls* sys) {
@@ -35,13 +35,12 @@ int arena_init(Arena** out, size_t initial_size, const MacSyscalls* sys) {
     a->size       = initial_size;
     a->high_water = 0;
     a->max_ever   = 0;
-    /* Caller contract: `sys` must outlive the Arena. Production wires
-     * a file-scope MacSyscalls in src/app.c; tests pass a stack-local
-     * FakeSyscalls that outlives every arena use in its enclosing
-     * test function. CodeQL flags this as "stack address in non-local
-     * memory" — that alert is a known false-positive under our
-     * lifetime contract. */
-    a->sys        = sys;
+    /* Copy the syscall vtable into the Arena by value. After this point
+     * the Arena owns its own snapshot and does not depend on `sys`'s
+     * storage lifetime. The 80-byte cost (20 function pointers x 4 B
+     * on 68k) is negligible against the 4 MB RAM budget and eliminates
+     * the dangling-pointer bug class CodeQL flagged here. */
+    a->sys = *sys;
 
     *out = a;
     return 0;
@@ -50,8 +49,8 @@ int arena_init(Arena** out, size_t initial_size, const MacSyscalls* sys) {
 void arena_destroy(Arena* a) {
     if (!a) return;
     if (a->backing) {
-        a->sys->hunlock(a->backing);
-        a->sys->dispose_handle(a->backing);
+        a->sys.hunlock(a->backing);
+        a->sys.dispose_handle(a->backing);
     }
     free(a);
 }
@@ -96,9 +95,9 @@ int arena_ensure(Arena* a, size_t bytes_needed) {
     /* SetHandleSize may relocate the block. HUnlock first, resize,
      * rebind base after relocking. If resize fails, relock at old
      * size and return failure. */
-    a->sys->hunlock(a->backing);
-    rc = a->sys->set_handle_size(a->backing, (long)next);
-    a->sys->hlock(a->backing);
+    a->sys.hunlock(a->backing);
+    rc = a->sys.set_handle_size(a->backing, (long)next);
+    a->sys.hlock(a->backing);
     a->base = *(char**)a->backing;
     if (rc != 0) return -1;
 
