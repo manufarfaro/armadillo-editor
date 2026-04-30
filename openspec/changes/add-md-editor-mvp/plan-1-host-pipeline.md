@@ -72,7 +72,7 @@
 ## Commit policy for this plan
 
 - **Every task that passes its verification step ends with a commit.** No trailing uncommitted work between tasks.
-- **Every commit uses the 1Password-signed git identity.** Prefix every commit with `SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"`.
+- **Every commit uses the 1Password-signed git identity.** Prefix every commit with `SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"`.
 - **No `Co-Authored-By` trailers.** The user does not want Claude attribution in commit history.
 - **Commit messages use imperative mood** ("Add arena allocator", not "Added arena allocator"). Keep subject ≤ 72 chars; wrap body at 72 chars; explain *why* in the body only when non-obvious.
 - **If a pre-commit hook fails**, investigate and fix the underlying issue. Do NOT use `--no-verify`. If a signing hook fails, re-check `SSH_AUTH_SOCK`.
@@ -80,7 +80,7 @@
 Shorthand used in steps below: `git-commit "<msg>"` means
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
   git commit -m "<msg>"
 ```
 
@@ -316,7 +316,6 @@ tar -xzf v2.6.1.tar.gz
 - [ ] **Step 4.2: Copy only the three files we need**
 
 ```bash
-cd /Users/manufarfaro/Documents/Projects/armadillo-editor
 cp /tmp/Unity-2.6.1/src/unity.c         third_party/unity/unity.c
 cp /tmp/Unity-2.6.1/src/unity.h         third_party/unity/unity.h
 cp /tmp/Unity-2.6.1/src/unity_internals.h  third_party/unity/unity_internals.h
@@ -411,7 +410,6 @@ Expected: a 40-char SHA (e.g., `481396abc2d0c0c518c67566d3352b8dcc72a99b` — ex
 md4c is a multi-file project but for our use we only need the CommonMark parser itself. Not `md4c-html.c` (HTML renderer — we render our own), not the CLI.
 
 ```bash
-cd /Users/manufarfaro/Documents/Projects/armadillo-editor
 cp /tmp/md4c/src/md4c.c   third_party/md4c/src/md4c.c
 cp /tmp/md4c/src/md4c.h   third_party/md4c/src/md4c.h
 cp /tmp/md4c/LICENSE.md   third_party/md4c/LICENSE
@@ -6101,7 +6099,7 @@ Expected: "nothing to commit, working tree clean."
 - [ ] **Step 51.5: Tag the Plan 1 milestone**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
   git tag -a plan-1-complete -m "Plan 1 complete: host-testable pipeline green"
 git tag -l plan-1-complete
 ```

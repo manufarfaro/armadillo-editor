@@ -80,11 +80,11 @@ Produces `ArmadilloEditor.APPL` + `ArmadilloEditor.dsk`.
 - **Signing is required.** The user's private key lives in 1Password. Prefix every `git commit` with:
 
   ```bash
-  SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
     git commit -m "..."
   ```
 
-  `ssh-add -l` in a default shell returns "no identities" — the default `SSH_AUTH_SOCK` points at Apple's launchd socket, not at 1Password's agent. Overriding the socket per-command is the cleanest fix.
+  `ssh-add -l` in a default shell returns "no identities" — the default `SSH_AUTH_SOCK` points at Apple's launchd socket, not at 1Password's agent. Overriding the socket per-command is the cleanest fix. Use `$HOME` rather than a hard-coded `/Users/<name>/` path so the example doesn't leak the local username into commits.
 
 - **Do NOT add `Co-Authored-By: Claude` trailers.** The user explicitly does not want them. Commit messages end at the last line of the body.
 
