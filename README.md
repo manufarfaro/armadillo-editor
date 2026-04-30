@@ -62,7 +62,7 @@ docker run --rm -v "$PWD":/work -w /work ghcr.io/autc04/retro68:latest bash -lc 
 Every push and PR runs three workflows:
 
 - **host-tests** (~1 min) — Unity-based unit tests on ubuntu-latest
-- **lint** (~30 s) — cppcheck (warnings/style/performance/portability, C89) + clang-format check
+- **lint** (~30 s) — cppcheck (warnings/style/performance/portability, C89). No formatter check; the codebase uses hand-formatted MPW C era style (column-aligned declarations, one-line OSErr guards) that automated formatters cannot fully preserve.
 - **release** (~5 min) — Retro68 cross-compile via `ghcr.io/autc04/retro68`; uploads `.APPL` and `.dsk` as workflow artifacts (14-day retention)
 
 CodeQL static analysis runs via GitHub's [Default Setup for Code Scanning](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning) (configured in repo Settings → Code security → Code scanning). Results appear in the Security tab. No workflow file needed — GitHub manages the queries and build detection.
