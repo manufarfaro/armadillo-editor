@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: lint only reads source to run cppcheck.
+permissions:
+  contents: read
+
 # Style note: this project uses hand-formatted MPW C / THINK C era style
 # (column-aligned declarations, one-line OSErr-style guards, multi-statement
 # `{ stmt1; stmt2; }` short blocks, trailing comments aligned across non-

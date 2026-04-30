@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: this workflow only reads source to run host unit tests.
+permissions:
+  contents: read
+
 jobs:
   host-tests:
     runs-on: ubuntu-latest
