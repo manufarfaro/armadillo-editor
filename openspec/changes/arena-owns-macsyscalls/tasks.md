@@ -32,7 +32,6 @@ No new files. No test-file changes. No header changes.
 - [x] **Step 1: Run the full host test suite from a clean state**
 
 ```bash
-cd /Users/manufarfaro/Documents/Projects/armadillo-editor
 make -f Makefile.hosttests clean
 make -f Makefile.hosttests test
 ```
@@ -137,10 +136,10 @@ Expected: no matches. The field is no longer a pointer, so the CodeQL rule "Loca
 - [x] **Step 6: Commit**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor add render/arena.c
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor commit -m "refactor(render/arena): own MacSyscalls by value
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git add render/arena.c
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git commit -m "refactor(render/arena): own MacSyscalls by value
 
 Replace the const MacSyscalls* field with a MacSyscalls field copied
 in at arena_init. After init the Arena no longer depends on the
@@ -213,10 +212,10 @@ Expected: same test count passes; zero failures. Comments don't change behavior.
 - [x] **Step 4: Commit**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor add src/debounce.c
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor commit -m "docs(src/debounce): pin per-call contract on sys parameter
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git add src/debounce.c
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git commit -m "docs(src/debounce): pin per-call contract on sys parameter
 
 Audit confirms debounce_on_edit and debounce_poll use sys only within
 the call and never retain it. Add a one-line comment to each pinning
@@ -326,10 +325,10 @@ Expected: same test count passes; zero failures.
 - [x] **Step 7: Commit**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor add src/file_io.c
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor commit -m "docs(src/file_io): pin per-call contract on sys parameter
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git add src/file_io.c
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git commit -m "docs(src/file_io): pin per-call contract on sys parameter
 
 Audit confirms all four public file_io_* functions use sys only
 within the call and never retain it. Add a one-line comment to each
@@ -372,10 +371,10 @@ Expected: the new bullet renders correctly with no broken indentation or fence i
 - [x] **Step 4: Commit**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor add CLAUDE.md
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor commit -m "docs(CLAUDE.md): split MacSyscalls storage rule into per-call vs. long-lived
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git add CLAUDE.md
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git commit -m "docs(CLAUDE.md): split MacSyscalls storage rule into per-call vs. long-lived
 
 Replace the blanket 'every module takes const MacSyscalls*' rule with
 the two-shape rule that the Arena refactor establishes: per-call APIs
@@ -457,10 +456,10 @@ Expected: at least one match showing the new by-value field. The struct snippet 
 - [x] **Step 5: Commit**
 
 ```bash
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor add openspec/changes/add-md-editor-mvp/design.md
-SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git -C /Users/manufarfaro/Documents/Projects/armadillo-editor commit -m "docs(design): reflect Arena by-value MacSyscalls storage
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git add openspec/changes/add-md-editor-mvp/design.md
+SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
+  git commit -m "docs(design): reflect Arena by-value MacSyscalls storage
 
 Update §4.2 struct snippet from const MacSyscalls* sys to MacSyscalls
 sys, and add the paragraph documenting the lifetime contract change.
@@ -477,7 +476,7 @@ Cross-references the arena-owns-macsyscalls follow-up change."
 - [ ] **Step 1: Push the branch**
 
 ```bash
-git -C /Users/manufarfaro/Documents/Projects/armadillo-editor push origin feature/plan-1-host-pipeline
+git push origin feature/plan-1-host-pipeline
 ```
 
 Expected: push succeeds; PR #1 picks up the new commits automatically.
