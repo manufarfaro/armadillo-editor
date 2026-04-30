@@ -29,7 +29,7 @@ No new files. No test-file changes. No header changes.
 **Files:**
 - Run-only: `Makefile.hosttests`
 
-- [ ] **Step 1: Run the full host test suite from a clean state**
+- [x] **Step 1: Run the full host test suite from a clean state**
 
 ```bash
 cd /Users/manufarfaro/Documents/Projects/armadillo-editor
@@ -39,7 +39,7 @@ make -f Makefile.hosttests test
 
 Expected: every `_test` binary runs and reports `OK` with zero failures. The total run prints `------ 0 FAILURES`. If anything is red, stop and investigate before any code change — we need a clean baseline to attribute regressions to.
 
-- [ ] **Step 2: Note the test count for cross-checking later**
+- [x] **Step 2: Note the test count for cross-checking later**
 
 Read the final summary line printed by `make`. Record the total test count somewhere local. After Task 2 we re-run and confirm the same number passes.
 
@@ -50,7 +50,7 @@ Read the final summary line printed by `make`. Record the total test count somew
 **Files:**
 - Modify: `render/arena.c:14-21` (struct), `render/arena.c:44` (init body), `render/arena.c:53-54` (destroy), `render/arena.c:99-101` (ensure)
 
-- [ ] **Step 1: Change the struct field from pointer to by-value**
+- [x] **Step 1: Change the struct field from pointer to by-value**
 
 Edit `render/arena.c` lines 14–21. Replace:
 
@@ -78,7 +78,7 @@ struct Arena {
 };
 ```
 
-- [ ] **Step 2: Replace the lifetime-contract comment with the new contract in `arena_init`**
+- [x] **Step 2: Replace the lifetime-contract comment with the new contract in `arena_init`**
 
 Edit `render/arena.c:38-44`. Replace the entire block:
 
@@ -103,7 +103,7 @@ with:
     a->sys = *sys;
 ```
 
-- [ ] **Step 3: Update every internal call site from `->` to `.`**
+- [x] **Step 3: Update every internal call site from `->` to `.`**
 
 In `render/arena.c`, change these four lines:
 
@@ -117,7 +117,7 @@ In `render/arena.c`, change these four lines:
 
 After the edit, run `grep -n 'sys->' render/arena.c` — expected output: empty. If any `->` remains, it's a missed call site.
 
-- [ ] **Step 4: Build and run the full host test suite**
+- [x] **Step 4: Build and run the full host test suite**
 
 ```bash
 make -f Makefile.hosttests clean
@@ -126,7 +126,7 @@ make -f Makefile.hosttests test
 
 Expected: the same test count as the baseline in Task 1 passes. Zero failures. Behavior is identical because the function pointers in `a->sys` are still the same addresses (copied from `*sys`); the only change is where they live (Arena's own memory vs. caller's memory).
 
-- [ ] **Step 5: Verify with the CodeQL rule offline (sanity check)**
+- [x] **Step 5: Verify with the CodeQL rule offline (sanity check)**
 
 ```bash
 grep -n 'const MacSyscalls\* sys;' render/arena.c
@@ -134,7 +134,7 @@ grep -n 'const MacSyscalls\* sys;' render/arena.c
 
 Expected: no matches. The field is no longer a pointer, so the CodeQL rule "Local variable address stored in non-local memory" can't trigger on this file.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
@@ -159,7 +159,7 @@ original, so behavior is identical."
 **Files:**
 - Modify: `src/debounce.c:14-18` (debounce_on_edit), `src/debounce.c:20-28` (debounce_poll)
 
-- [ ] **Step 1: Confirm `sys` is not retained anywhere**
+- [x] **Step 1: Confirm `sys` is not retained anywhere**
 
 ```bash
 grep -n 'sys' src/debounce.c src/debounce.h
@@ -167,7 +167,7 @@ grep -n 'sys' src/debounce.c src/debounce.h
 
 Expected: every reference is either a function parameter (`const MacSyscalls* sys`) or a call through it (`sys->tick_count()`). No assignment of `sys` to any field, struct, or static. If you find one, stop — the audit found a bug, escalate to a maintainer.
 
-- [ ] **Step 2: Add a one-line per-call comment to each public function**
+- [x] **Step 2: Add a one-line per-call comment to each public function**
 
 Edit `src/debounce.c`. After line 14 (the opening brace of `debounce_on_edit`), insert:
 
@@ -201,7 +201,7 @@ int debounce_poll(DebounceState* s, const MacSyscalls* sys) {
 }
 ```
 
-- [ ] **Step 3: Build and re-run the test suite**
+- [x] **Step 3: Build and re-run the test suite**
 
 ```bash
 make -f Makefile.hosttests clean
@@ -210,7 +210,7 @@ make -f Makefile.hosttests test
 
 Expected: same test count passes; zero failures. Comments don't change behavior.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
@@ -230,7 +230,7 @@ the contract for future readers and reviewers."
 **Files:**
 - Modify: `src/file_io.c:22-25` (file_io_open_interactive), `src/file_io.c:27-30` (file_io_save_as), `src/file_io.c:34-76` (file_io_open), `src/file_io.c:78-94` (file_io_save)
 
-- [ ] **Step 1: Confirm `sys` is not retained anywhere**
+- [x] **Step 1: Confirm `sys` is not retained anywhere**
 
 ```bash
 grep -n 'sys' src/file_io.c src/file_io.h
@@ -238,7 +238,7 @@ grep -n 'sys' src/file_io.c src/file_io.h
 
 Expected: every reference is a function parameter or a call through it. No assignment of `sys` to any field, struct, or static. If you find one, stop — the audit found a bug, escalate.
 
-- [ ] **Step 2: Add the per-call comment to `file_io_open_interactive`**
+- [x] **Step 2: Add the per-call comment to `file_io_open_interactive`**
 
 Edit `src/file_io.c` lines 22–25. Replace:
 
@@ -259,7 +259,7 @@ int file_io_open_interactive(Doc** out_doc, const MacSyscalls* sys) {
 }
 ```
 
-- [ ] **Step 3: Add the per-call comment to `file_io_save_as`**
+- [x] **Step 3: Add the per-call comment to `file_io_save_as`**
 
 Edit `src/file_io.c` lines 27–30. Replace:
 
@@ -280,7 +280,7 @@ int file_io_save_as(Doc* d, const MacSyscalls* sys) {
 }
 ```
 
-- [ ] **Step 4: Add the per-call comment to `file_io_open`**
+- [x] **Step 4: Add the per-call comment to `file_io_open`**
 
 Edit `src/file_io.c` line 36 (right after the function's opening brace, before the local declarations). Insert the comment so the function head reads:
 
@@ -300,7 +300,7 @@ int file_io_open(const void* fsspec_opaque, Doc** out_doc,
     /* ... rest of function body unchanged ... */
 ```
 
-- [ ] **Step 5: Add the per-call comment to `file_io_save`**
+- [x] **Step 5: Add the per-call comment to `file_io_save`**
 
 Edit `src/file_io.c` line 79. Insert the comment as the first line inside the body. The function head should read:
 
@@ -314,7 +314,7 @@ int file_io_save(Doc* d, const MacSyscalls* sys) {
     /* ... rest of function body unchanged ... */
 ```
 
-- [ ] **Step 6: Build and re-run the test suite**
+- [x] **Step 6: Build and re-run the test suite**
 
 ```bash
 make -f Makefile.hosttests clean
@@ -323,7 +323,7 @@ make -f Makefile.hosttests test
 
 Expected: same test count passes; zero failures.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
@@ -343,7 +343,7 @@ pinning the contract for future readers and reviewers."
 **Files:**
 - Modify: `CLAUDE.md` (the "Three test seams" bullet under "Architecture (the non-obvious, cross-file parts)")
 
-- [ ] **Step 1: Locate the existing rule**
+- [x] **Step 1: Locate the existing rule**
 
 Open `CLAUDE.md` and find the bullet that begins with `**Three test seams.**`. Currently it reads (one block):
 
@@ -351,7 +351,7 @@ Open `CLAUDE.md` and find the bullet that begins with `**Three test seams.**`. C
 - **Three test seams.** `MacSyscalls` (Toolbox vtable), `DrawOps` (QuickDraw vtable), `MdParseSink` (parser events). Every module that touches the OS takes `const MacSyscalls*`. The renderer calls through `DrawOps`. Scanner/render plug into `MdParseSink`. Host tests inject fakes at each seam.
 ```
 
-- [ ] **Step 2: Replace the bullet with the per-call vs. long-lived split**
+- [x] **Step 2: Replace the bullet with the per-call vs. long-lived split**
 
 Replace the block above with:
 
@@ -361,7 +361,7 @@ Replace the block above with:
   - **Long-lived owners** (heap-allocated structs that retain `sys` past their constructor's stack frame) take `const MacSyscalls* sys` as a parameter, then copy `*sys` into a `MacSyscalls` field by value at init. The struct owns its private 80-byte snapshot and is independent of the caller's storage lifetime. Examples: `Arena`, `SrcPane` (Plan 2).
 ```
 
-- [ ] **Step 3: Verify the file still parses as Markdown**
+- [x] **Step 3: Verify the file still parses as Markdown**
 
 ```bash
 grep -A2 -B2 'Per-call APIs' CLAUDE.md
@@ -369,7 +369,7 @@ grep -A2 -B2 'Per-call APIs' CLAUDE.md
 
 Expected: the new bullet renders correctly with no broken indentation or fence imbalance.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
@@ -391,11 +391,11 @@ matches what they do."
 **Files:**
 - Modify: `openspec/changes/add-md-editor-mvp/design.md:410-419` (the struct snippet)
 
-- [ ] **Step 1: Find the snippet at §4.2**
+- [x] **Step 1: Find the snippet at §4.2**
 
 Open `openspec/changes/add-md-editor-mvp/design.md` and locate lines 410–419 — the `struct Arena` snippet inside the "render/arena.c — internals" code fence.
 
-- [ ] **Step 2: Replace the struct snippet to reflect by-value storage**
+- [x] **Step 2: Replace the struct snippet to reflect by-value storage**
 
 Replace lines 410–419:
 
@@ -425,7 +425,7 @@ struct Arena {
 };
 ```
 
-- [ ] **Step 3: Add a one-paragraph note to §4.2 below the code fence**
+- [x] **Step 3: Add a one-paragraph note to §4.2 below the code fence**
 
 In `openspec/changes/add-md-editor-mvp/design.md`, the structure around line 425 is:
 
@@ -446,7 +446,7 @@ Insert a new paragraph between line 425 (the closing fence) and line 427 (the ne
 429	### 4.3 Four policy decisions
 ```
 
-- [ ] **Step 4: Verify the file is still well-formed Markdown**
+- [x] **Step 4: Verify the file is still well-formed Markdown**
 
 ```bash
 grep -n 'MacSyscalls sys' openspec/changes/add-md-editor-mvp/design.md
@@ -454,7 +454,7 @@ grep -n 'MacSyscalls sys' openspec/changes/add-md-editor-mvp/design.md
 
 Expected: at least one match showing the new by-value field. The struct snippet should now read `MacSyscalls sys` (not `const MacSyscalls* sys`) within §4.2.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 SSH_AUTH_SOCK="/Users/manufarfaro/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
