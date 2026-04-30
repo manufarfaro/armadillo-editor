@@ -88,11 +88,13 @@ Each `Block` carries an array of `StyleRun` tuples describing inline styling wit
 - THEN that block's `run_count == 1` and `runs[0].kind == kStyleStrong`
 - AND `runs[0].start == 6` and `runs[0].length == 9` (offsets relative to the block's text)
 
-### Requirement: Link table
+### Requirement: Link table (deferred — Tier 2+)
 
-The model SHALL maintain a separate arena-allocated link table mapping `link_index` values to URL strings. `kStyleLink` runs' `link_index` field indexes into this table. URLs are stored with their lengths (not NUL-terminated).
+**Status: not in MVP.** For MVP, `kStyleLink` runs carry `link_index = -1` and no link table is maintained. Link click-through and URL storage land in a post-Tier-6 change (see `PRD.md` non-goals). MVP renders link text with the link style (sky-blue + underlined) but does not resolve URLs.
 
-#### Scenario: Link run resolves to URL
+The eventual model SHALL maintain a separate arena-allocated link table mapping `link_index` values to URL strings. `kStyleLink` runs' `link_index` field indexes into this table. URLs are stored with their lengths (not NUL-terminated).
+
+#### Scenario: Link run resolves to URL (deferred)
 - GIVEN a paragraph with one `[text](http://ex.com)` link
 - WHEN the model is built
 - THEN the paragraph's single `StyleRun` has `link_index == 0`
@@ -134,7 +136,7 @@ The renderer SHALL NOT call QuickDraw directly. Production `DrawContext` wraps r
 | kBlockHeading H2  | Chicago     | 14   | bold     | ink     | none                                              |
 | kBlockHeading H3  | Chicago     | 12   | bold     | ink     | none                                              |
 | kBlockHeading H4–H6 | Chicago   | 12   | plain    | ink     | none                                              |
-| kBlockListItem    | Geneva      | 12   | plain    | ink     | bullet glyph (•, ◦, ▪) at indent_list * list_depth |
+| kBlockListItem    | Geneva      | 12   | plain    | ink     | ASCII `*` bullet at indent_list * list_depth (MVP); per-depth glyphs (•, ◦, ▪) land in Tier 2 |
 | kBlockBlockQuote  | Geneva      | 12   | plain    | ink     | vertical bar at left; indent_quote * quote_depth   |
 | kBlockCodeBlock   | Monaco      | 10   | plain    | ink     | background rectangle (lightgrey)                   |
 | kBlockHr          | —           | —    | —        | ink     | horizontal line across content_width (MVP)         |
@@ -161,11 +163,13 @@ During block drawing, the renderer SHALL apply each `StyleRun` by emitting `set_
 - WHEN rendered
 - THEN recorded calls include, in order: `draw_text("plain ", 6)`, `set_font(Geneva, 12, bold)`, `draw_text("bold", 4)`, `set_font(Geneva, 12, plain)`, `draw_text(" rest", 5)`
 
-### Requirement: Word wrap within content_width
+### Requirement: Word wrap within content_width (deferred — Tier 2+)
 
-Text within a block SHALL wrap at word boundaries when a line exceeds `params.content_width - block's indent`. Lines advance vertically by `line_height` (retrieved via `DrawOps.get_font_metrics` for the current font). Word boundary detection uses ASCII space as the wrap point (CJK is out of scope for MVP).
+**Status: not in MVP.** For MVP, each block's text is emitted on a single line; text that exceeds `content_width` overflows the window's right edge. Wireframe sample content and typical short documents don't trigger this; real wrap lands alongside the custom text engine that lifts TextEdit's 32-KB ceiling (see `PRD.md` tier roadmap).
 
-#### Scenario: Long paragraph wraps to multiple lines
+The eventual requirement: text within a block SHALL wrap at word boundaries when a line exceeds `params.content_width - block's indent`. Lines advance vertically by `line_height` (retrieved via `DrawOps.get_font_metrics` for the current font). Word boundary detection uses ASCII space as the wrap point (CJK is out of scope for MVP).
+
+#### Scenario: Long paragraph wraps to multiple lines (deferred)
 - GIVEN a paragraph whose text exceeds `content_width` by 3 words and a font with `line_height == 16`
 - WHEN rendered
 - THEN two or more `draw_text` calls appear at different vertical y values

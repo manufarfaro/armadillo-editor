@@ -1,0 +1,19 @@
+# .clangd — tells the clangd language server which compile flags to use for
+# every source file, so IDE diagnostics match what the build systems actually
+# pass. Without this, clangd has no -I flags and cross-module includes like
+# `#include "src/mac_syscalls.h"` fail to resolve in the editor even though
+# the build itself is fine.
+#
+# Keep in sync with Makefile.hosttests CFLAGS (host-build target flags) and
+# CMakeLists.txt target_include_directories (cross-build target flags).
+
+CompileFlags:
+  # -xc: force C (clangd treats .h as Objective-C++ by default on macOS,
+  #      which makes -std=c89 an invalid combination).
+  Add:
+    - -xc
+    - -std=c89
+    - -Wall
+    - -I.
+    - -Ithird_party/md4c/src
+    - -Ithird_party/unity

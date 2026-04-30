@@ -1,0 +1,85 @@
+# Makefile.hosttests — host unit tests for Armadillo Editor
+#
+# Builds and runs each module's _test.c against native cc. Intended for
+# fast iteration (< 2 s full suite) with no Retro68/QEMU dependency.
+#
+# Test binaries land in build_hosttests/; this directory is gitignored.
+#
+# Run: make -f Makefile.hosttests test
+# Clean: make -f Makefile.hosttests clean
+
+CC       ?= cc
+# -I. puts the repo root on the include search path so cross-module headers
+# can be path-qualified (e.g. `#include "src/mac_syscalls.h"` inside a file
+# under render/). The per-module -I flags below are defense-in-depth for any
+# remaining bare-name includes within a single module.
+#
+# -MMD -MP generates .d files alongside each .o with precise header
+# dependencies. -include pulls them back in so editing a header triggers a
+# rebuild of every object that transitively includes it. Prevents silent
+# stale-object builds as the source tree grows across Plan 1 phases.
+CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -MMD -MP \
+            -I. \
+            -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
+BUILDDIR := build_hosttests
+
+UNITY    := third_party/unity/unity.c
+FAKES    := test/fake_syscalls.c
+RECORDER := test/recorder.c
+
+# Test binaries — populated phase by phase as implementations land.
+TESTS := $(BUILDDIR)/arena_test $(BUILDDIR)/doc_test $(BUILDDIR)/debounce_test $(BUILDDIR)/mdparse_test $(BUILDDIR)/scanner_test $(BUILDDIR)/render_test $(BUILDDIR)/file_io_test
+
+.PHONY: all test clean
+all: $(TESTS)
+
+test: $(TESTS)
+	@if [ -z "$(TESTS)" ]; then \
+	    echo "No test binaries defined yet — returning green (no tests to run)."; \
+	else \
+	    pass=0; fail=0; \
+	    for t in $(TESTS); do \
+	        echo "=== $$t ==="; \
+	        if $$t; then pass=$$(expr $$pass + 1); else fail=$$(expr $$fail + 1); fi; \
+	    done; \
+	    echo; \
+	    echo "Summary: $$pass passed, $$fail failed"; \
+	    test $$fail -eq 0; \
+	fi
+
+$(BUILDDIR)/arena_test: render/arena.c render/arena_test.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/doc_test: src/doc.c src/doc_test.c $(UNITY)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/debounce_test: src/debounce.c src/debounce_test.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/mdparse_test: mdparse/mdparse.c mdparse/mdparse_test.c third_party/md4c/src/md4c.c $(UNITY)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/scanner_test: scanner/scanner.c scanner/scanner_test.c render/arena.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/render_test: render/render.c render/render_test.c render/arena.c $(UNITY) $(FAKES) $(RECORDER)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+$(BUILDDIR)/file_io_test: src/file_io.c src/file_io_test.c src/doc.c $(UNITY) $(FAKES)
+	@mkdir -p $(BUILDDIR)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+# Pull in auto-generated header dependency files so editing a header
+# triggers a rebuild of anything that includes it.
+-include $(BUILDDIR)/*.d
+
+clean:
+	rm -rf $(BUILDDIR)

@@ -410,12 +410,12 @@ size_t arena_capacity(const Arena*);
 ```c
 /* render/arena.c — internals */
 struct Arena {
-    Handle              backing;
-    char*               base;      /* = *backing while HLocked */
-    size_t              size;      /* current Handle size */
-    size_t              high_water;
-    size_t              max_ever;
-    const MacSyscalls*  sys;
+    Handle      backing;
+    char*       base;      /* = *backing while HLocked */
+    size_t      size;      /* current Handle size */
+    size_t      high_water;
+    size_t      max_ever;
+    MacSyscalls sys;       /* by-value copy taken at arena_init */
 };
 
 #define kArenaInitialSize    ( 8u * 1024u)
@@ -423,6 +423,8 @@ struct Arena {
 #define kArenaLinearStep     (32u * 1024u)
 #define kArenaHardCap       (512u * 1024u)
 ```
+
+The `MacSyscalls` field is stored by value, not as a pointer. `arena_init` takes a `const MacSyscalls*` parameter and copies `*sys` into the field at init. After that the `Arena` owns its private 80-byte snapshot and does not depend on the caller's storage lifetime. This eliminates the lifetime-coupling bug that an earlier draft (with a `const MacSyscalls*` field) introduced — see `openspec/changes/arena-owns-macsyscalls/` for the follow-up change that established this rule.
 
 ### 4.3 Four policy decisions
 
@@ -777,11 +779,11 @@ armadillo-editor/
 │   ├── scanner.c/h
 │   └── scanner_test.c
 ├── test/
-│   ├── unity/                    # vendored Unity test framework
-│   ├── fake_syscalls.c/h
-│   └── recorder.c/h
-├── third_party/
-│   └── md4c/                     # vendored at pinned commit
+│   ├── fake_syscalls.c/h         # our own test internals
+│   └── recorder.c/h              # our own test internals
+├── third_party/                  # vendored deps (at pinned versions)
+│   ├── md4c/
+│   └── unity/
 ├── armadillo.r                   # menus, WIND, ALRT, DLOG, DITL, STR#, icons
 ├── CMakeLists.txt
 ├── Makefile.hosttests
@@ -798,8 +800,8 @@ armadillo-editor/
 ### 7.2 CMakeLists.txt (cross-compile for 68k)
 
 ```cmake
-cmake_minimum_required(VERSION 3.9)
-project(ArmadilloEditor)
+cmake_minimum_required(VERSION 3.15)
+project(ArmadilloEditor C)
 
 set(MD4C_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/md4c/src)
 set(MD4C_SOURCES ${MD4C_DIR}/md4c.c)
@@ -826,12 +828,17 @@ target_include_directories(ArmadilloEditor PRIVATE
 )
 
 target_compile_definitions(ArmadilloEditor PRIVATE
-    kArmadilloTargetFloor=68030
+    MD4C_USE_ASCII=1
 )
 
-set_target_properties(ArmadilloEditor PROPERTIES
-    COMPILE_OPTIONS -ffunction-sections
-    LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single"
+target_compile_options(ArmadilloEditor PRIVATE
+    -ffunction-sections -Os -Wall
+)
+set_source_files_properties(${MD4C_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-w"
+)
+target_link_options(ArmadilloEditor PRIVATE
+    "LINKER:-gc-sections" "LINKER:--mac-single"
 )
 
 # Separate .APPL for on-device smoke test
@@ -856,8 +863,8 @@ add_application(ArmadilloSmokeTest
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -g \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
-            -Itest -Itest/unity -Ithird_party/md4c/src
-UNITY    := test/unity/unity.c
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
+UNITY    := third_party/unity/unity.c
 FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 

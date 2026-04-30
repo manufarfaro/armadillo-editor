@@ -22,7 +22,7 @@
 - Create: `Makefile.hosttests` (host unit-test runner)
 - Create: `armadillo.r` (stub — just enough to produce an `.APPL`)
 - Create: `CLAUDE.md`, `README.md` (short; expanded in Plan 2)
-- Create: `test/unity/unity.c`, `test/unity/unity.h`, `test/unity/unity_internals.h` (vendored)
+- Create: `third_party/unity/unity.c`, `third_party/unity/unity.h`, `third_party/unity/unity_internals.h` (vendored)
 - Create: `third_party/md4c/src/md4c.c`, `third_party/md4c/src/md4c.h`, `third_party/md4c/COMMIT.txt`, `third_party/md4c/README.md` (vendored)
 
 ### Public headers
@@ -56,8 +56,8 @@
 - Create: `.clang-format`
 - Create: `.github/workflows/host-tests.yml`
 - Create: `.github/workflows/lint.yml`
-- Create: `.github/workflows/codeql.yml`
 - Create: `.github/workflows/release.yml`
+- Configure (outside the repo): CodeQL via GitHub's Default Setup in repo Settings → Code security → Code scanning
 - Modify: `README.md` (full MVP version replaces the Task 2 stub — adds badges + CI section + Docker cross-compile instructions)
 
 ### Not created in this plan (Plan 2)
@@ -101,7 +101,7 @@ Phases group related tasks into natural deliverable boundaries. After each phase
 7. **Phase 7 — Scanner** (Tasks 38–39): style-run producer from sink events.
 8. **Phase 8 — Render** (Tasks 40–44): flat-block model construction + layout + draw via `DrawOps`. Largest phase.
 9. **Phase 9 — File I/O** (host parts, Task 45): open/save data paths with `FakeSyscalls`.
-10. **Phase 10 — CI & GitHub delivery** (Tasks 46–50): four GitHub Actions workflows (host-tests, lint, codeql, release) + `.clang-format` + README badges. Uses `ghcr.io/autc04/retro68` for the cross-build job.
+10. **Phase 10 — CI & GitHub delivery** (Tasks 46–50): three GitHub Actions workflows (host-tests, lint, release) + `.clang-format` + README badges + CodeQL via GitHub's Default Setup. Uses `ghcr.io/autc04/retro68` for the cross-build job.
 11. **Phase 11 — Final verification** (Task 51): full suite, spec-coverage audit, tag `plan-1-complete`.
 
 Each task below is atomic — it starts with a clean working tree (except the commit-in-progress staging) and ends with a clean working tree after its commit step.
@@ -248,12 +248,12 @@ the first runnable .APPL.
 ### Task 3: Create directory skeleton
 
 **Files:**
-- Create (empty): `src/`, `src_pane/`, `render/`, `mdparse/`, `scanner/`, `test/`, `test/unity/`, `third_party/`, `third_party/md4c/`, `third_party/md4c/src/`
+- Create (empty): `src/`, `src_pane/`, `render/`, `mdparse/`, `scanner/`, `test/`, `third_party/`, `third_party/unity/`, `third_party/md4c/`, `third_party/md4c/src/`
 
 - [ ] **Step 3.1: Create the module directories**
 
 ```bash
-mkdir -p src src_pane render mdparse scanner test/unity third_party/md4c/src
+mkdir -p src src_pane render mdparse scanner test third_party/unity third_party/md4c/src
 ```
 
 - [ ] **Step 3.2: Add placeholder files so git tracks the empty dirs**
@@ -262,9 +262,9 @@ Create `.gitkeep` files in each otherwise-empty directory:
 
 ```bash
 touch src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep \
-      scanner/.gitkeep test/.gitkeep test/unity/.gitkeep \
-      third_party/.gitkeep third_party/md4c/.gitkeep \
-      third_party/md4c/src/.gitkeep
+      scanner/.gitkeep test/.gitkeep \
+      third_party/.gitkeep third_party/unity/.gitkeep \
+      third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
 ```
 
 (Each `.gitkeep` will be deleted organically as its directory gains real files.)
@@ -272,7 +272,7 @@ touch src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep \
 - [ ] **Step 3.3: Verify the tree**
 
 ```bash
-ls -la src src_pane render mdparse scanner test test/unity third_party third_party/md4c third_party/md4c/src
+ls -la src src_pane render mdparse scanner test third_party third_party/unity third_party/md4c third_party/md4c/src
 ```
 
 Expected: each directory exists and contains a `.gitkeep`.
@@ -280,7 +280,7 @@ Expected: each directory exists and contains a `.gitkeep`.
 - [ ] **Step 3.4: Stage and commit**
 
 ```bash
-git add src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep scanner/.gitkeep test/.gitkeep test/unity/.gitkeep third_party/.gitkeep third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
+git add src/.gitkeep src_pane/.gitkeep render/.gitkeep mdparse/.gitkeep scanner/.gitkeep test/.gitkeep third_party/.gitkeep third_party/unity/.gitkeep third_party/md4c/.gitkeep third_party/md4c/src/.gitkeep
 ```
 
 Then `git-commit` with message:
@@ -288,9 +288,10 @@ Then `git-commit` with message:
 ```
 Add module directory skeleton
 
-Create src/, src_pane/, render/, mdparse/, scanner/, test/unity/, and
-third_party/md4c/src/. Each holds a .gitkeep placeholder that gets
-removed organically as real files land.
+Create src/, src_pane/, render/, mdparse/, scanner/, test/,
+third_party/unity/, and third_party/md4c/src/. Each holds a
+.gitkeep placeholder that gets removed organically as real files
+land.
 ```
 
 ---
@@ -298,9 +299,9 @@ removed organically as real files land.
 ### Task 4: Vendor Unity test framework
 
 **Files:**
-- Create: `test/unity/unity.c`, `test/unity/unity.h`, `test/unity/unity_internals.h`
-- Delete: `test/unity/.gitkeep` (replaced by real files)
-- Create: `test/unity/README.md` (records version + license)
+- Create: `third_party/unity/unity.c`, `third_party/unity/unity.h`, `third_party/unity/unity_internals.h`
+- Delete: `third_party/unity/.gitkeep` (replaced by real files)
+- Create: `third_party/unity/README.md` (records version + license)
 
 Unity is a small C unit-test framework (https://github.com/ThrowTheSwitch/Unity). Use a pinned tagged release for reproducibility.
 
@@ -316,14 +317,14 @@ tar -xzf v2.6.1.tar.gz
 
 ```bash
 cd /Users/manufarfaro/Documents/Projects/armadillo-editor
-cp /tmp/Unity-2.6.1/src/unity.c         test/unity/unity.c
-cp /tmp/Unity-2.6.1/src/unity.h         test/unity/unity.h
-cp /tmp/Unity-2.6.1/src/unity_internals.h  test/unity/unity_internals.h
-cp /tmp/Unity-2.6.1/LICENSE.txt        test/unity/LICENSE.txt
-rm test/unity/.gitkeep
+cp /tmp/Unity-2.6.1/src/unity.c         third_party/unity/unity.c
+cp /tmp/Unity-2.6.1/src/unity.h         third_party/unity/unity.h
+cp /tmp/Unity-2.6.1/src/unity_internals.h  third_party/unity/unity_internals.h
+cp /tmp/Unity-2.6.1/LICENSE.txt        third_party/unity/LICENSE.txt
+rm third_party/unity/.gitkeep
 ```
 
-- [ ] **Step 4.3: Create `test/unity/README.md`**
+- [ ] **Step 4.3: Create `third_party/unity/README.md`**
 
 ```markdown
 # Unity — vendored
@@ -352,7 +353,7 @@ Upstream: https://github.com/ThrowTheSwitch/Unity
 - [ ] **Step 4.4: Verify Unity compiles standalone**
 
 ```bash
-cc -std=c89 -Wall -c test/unity/unity.c -o /tmp/unity_check.o
+cc -std=c89 -Wall -c third_party/unity/unity.c -o /tmp/unity_check.o
 ```
 
 Expected: exit 0, no warnings. (If Unity's headers use features beyond C89 — some versions do — bump to `-std=c99` in the Makefile later but keep project code C89-compatible.)
@@ -362,9 +363,9 @@ Delete the check artifact: `rm /tmp/unity_check.o`.
 - [ ] **Step 4.5: Stage and commit**
 
 ```bash
-git add test/unity/unity.c test/unity/unity.h test/unity/unity_internals.h \
-        test/unity/LICENSE.txt test/unity/README.md
-git rm test/unity/.gitkeep
+git add third_party/unity/unity.c third_party/unity/unity.h third_party/unity/unity_internals.h \
+        third_party/unity/LICENSE.txt third_party/unity/README.md
+git rm third_party/unity/.gitkeep
 ```
 
 Then `git-commit` with message:
@@ -376,7 +377,7 @@ Unity provides a minimal C unit-test framework with TEST_ASSERT_*
 macros. Pinned at tag v2.6.1 so upgrades are deliberate. MIT-licensed;
 LICENSE.txt carried alongside the source.
 
-Standard vendoring flow lives in test/unity/README.md.
+Standard vendoring flow lives in third_party/unity/README.md.
 ```
 
 ---
@@ -507,8 +508,10 @@ Just enough resources to let CMakeLists.txt produce an `.APPL`. Real menus, aler
 
 #include "Types.r"
 
-/* Size flags the app needs — small heap + accepts suspend/resume events.
- * 2MB is a safe MVP stack + heap floor; tune later if needed. */
+/* Size Manager resource.
+ * 2 MB preferred / 1 MB minimum — MVP stub sizing; Plan 2 tunes
+ * against real arena + TE footprints. 32-bit clean for 68030+ hosts
+ * (no 24-bit addressing assumed). */
 resource 'SIZE' (-1) {
     reserved,
     acceptSuspendResumeEvents,
@@ -518,7 +521,7 @@ resource 'SIZE' (-1) {
     backgroundAndForeground,
     dontGetFrontClicks,
     ignoreChildDiedEvents,
-    not32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
+    is32BitCompatible,     /* set via size flags; Retro68 respects 32-bit clean code */
     isHighLevelEventAware,
     localAndRemoteHLEvents,
     notStationeryAware,
@@ -561,7 +564,7 @@ At this point we only have `armadillo.r` and vendored md4c. The stub lets Retro6
 - [ ] **Step 7.1: Create `CMakeLists.txt`**
 
 ```cmake
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 project(ArmadilloEditor C)
 
 #
@@ -589,6 +592,9 @@ set(MD4C_SOURCES ${MD4C_DIR}/md4c.c)
 # The app target. Source list is incremental — modules are added as
 # they're implemented across Plan 1 and Plan 2.
 add_application(ArmadilloEditor
+    # Phase 1 stub main (replaced by src/app.c in Plan 2)
+    src/stub_main.c
+
     # Renderer + pipeline (Plan 1 modules land here)
     # render/arena.c
     # render/render.c
@@ -598,7 +604,7 @@ add_application(ArmadilloEditor
     # src/debounce.c
     # src/file_io.c
 
-    # App shell (Plan 2 adds these)
+    # App shell (Plan 2 replaces stub_main.c with these)
     # src/app.c
     # src/menus.c
     # src/win_editor.c
@@ -621,19 +627,40 @@ target_include_directories(ArmadilloEditor PRIVATE
     third_party/md4c/src
 )
 
-# 68030+ target floor; no 68040-only instructions.
-target_compile_definitions(ArmadilloEditor PRIVATE
-    kArmadilloTargetFloor=68030
-)
-
-# md4c defines — keep parser conservative for 68030 perf.
+# md4c defines.
+# MD4C_USE_ASCII=1 — disables md4c's Unicode word-class tables
+# (trades ~few-KB lookups for a byte compare per char on a 25 MHz
+# target). Input is still parsed byte-for-byte; it's only word-
+# boundary detection inside spans that becomes ASCII-only.
+# MacRoman / UTF-8 documents still round-trip cleanly.
 target_compile_definitions(ArmadilloEditor PRIVATE
     MD4C_USE_ASCII=1
 )
 
-set_target_properties(ArmadilloEditor PROPERTIES
-    COMPILE_OPTIONS -ffunction-sections
-    LINK_FLAGS "-Wl,-gc-sections -Wl,--mac-single"
+# Compile options.
+# -ffunction-sections + -Wl,-gc-sections lets the linker drop
+# unreferenced functions (smaller .APPL).
+# -Os optimizes for size — critical on 25 MHz 68030 with tight RAM.
+# -Wall catches common bugs; md4c gets -w below because we don't
+# own its source and its warnings are not our problem.
+# TODO (Plan 2): decide whether to add -mcpu=68020 or -mcpu=68030.
+# Default (no -mcpu) compiles for gcc's 68000 baseline, which
+# loses any 68020+ optimizations but is maximally conservative.
+# Add -mcpu=... once we want to commit to the CPU floor in code.
+target_compile_options(ArmadilloEditor PRIVATE
+    -ffunction-sections
+    -Os
+    -Wall
+)
+
+# Suppress warnings on vendored md4c — we don't own its source.
+set_source_files_properties(${MD4C_SOURCES} PROPERTIES
+    COMPILE_OPTIONS "-w"
+)
+
+target_link_options(ArmadilloEditor PRIVATE
+    "LINKER:-gc-sections"
+    "LINKER:--mac-single"
 )
 ```
 
@@ -683,11 +710,12 @@ At this stage the target list is empty; each phase adds its own rule.
 
 CC       ?= cc
 CFLAGS   ?= -std=c89 -Wall -Werror -Wno-unused-function -g \
+            -I. \
             -Isrc -Irender -Imdparse -Iscanner -Isrc_pane \
-            -Itest -Itest/unity -Ithird_party/md4c/src
+            -Itest -Ithird_party/unity -Ithird_party/md4c/src
 BUILDDIR := build_hosttests
 
-UNITY    := test/unity/unity.c
+UNITY    := third_party/unity/unity.c
 FAKES    := test/fake_syscalls.c
 RECORDER := test/recorder.c
 
@@ -1058,7 +1086,7 @@ StyleKind covers the inline-run types scanner and render share
 #define ARMA_ARENA_H
 
 #include <stddef.h>
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct Arena Arena;    /* opaque */
 
@@ -1101,7 +1129,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "render/arena.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 ```
 
@@ -1270,7 +1298,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "render/render.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add render/render.h
 ```
@@ -1309,8 +1337,8 @@ Forward-declares MdParseSink (no include) to avoid dependency cycles.
 #define ARMA_MDPARSE_H
 
 #include <stddef.h>
-#include "blocks.h"
-#include "inlines.h"
+#include "render/blocks.h"
+#include "render/inlines.h"
 
 typedef struct BlockAttrs {
     unsigned char h_level;       /* 1..6 for kBlockHeading, 0 otherwise */
@@ -1354,7 +1382,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "mdparse/mdparse.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I render -I mdparse -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add mdparse/mdparse.h
 git rm mdparse/.gitkeep
@@ -1396,9 +1424,9 @@ list_ordered to on_block_open.
 #define ARMA_SCANNER_H
 
 #include <stddef.h>
-#include "arena.h"
-#include "inlines.h"
-#include "mdparse.h"
+#include "render/arena.h"
+#include "render/inlines.h"
+#include "mdparse/mdparse.h"
 
 typedef struct Scanner Scanner;    /* opaque */
 
@@ -1430,7 +1458,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "scanner/scanner.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I render -I mdparse -I scanner -I src -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add scanner/scanner.h
 git rm scanner/.gitkeep
@@ -1477,8 +1505,8 @@ Vendor-free header — no TE types. Internals are Plan 2's territory.
 #define ARMA_SRC_PANE_H
 
 #include <stddef.h>
-#include "inlines.h"
-#include "mac_syscalls.h"
+#include "render/inlines.h"
+#include "src/mac_syscalls.h"
 
 typedef struct SrcPaneParams {
     short left;
@@ -1528,7 +1556,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "src_pane/src_pane.h"
 int main(void) { return 0; }
 EOF
-cc -std=c89 -Wall -Werror -I src -I src_pane -I render -c /tmp/marma_harness.c -o /tmp/marma_harness.o
+cc -std=c89 -Wall -Werror -I. -c /tmp/marma_harness.c -o /tmp/marma_harness.o
 rm /tmp/marma_harness.*
 git add src_pane/src_pane.h
 git rm src_pane/.gitkeep
@@ -1784,7 +1812,7 @@ Every host test that needs Toolbox fakes includes this. Default behavior is "all
 #ifndef ARMA_FAKE_SYSCALLS_H
 #define ARMA_FAKE_SYSCALLS_H
 
-#include "mac_syscalls.h"
+#include "src/mac_syscalls.h"
 
 typedef struct FakeSyscalls {
     MacSyscalls vtable;   /* MUST be first — callers cast &fake.vtable */
@@ -2055,7 +2083,7 @@ void fake_syscalls_activate(FakeSyscalls* f) {
 - [ ] **Step 21.4: Verify compile**
 
 ```bash
-cc -std=c89 -Wall -Werror -I src -I test -c test/fake_syscalls.c -o /tmp/fs.o
+cc -std=c89 -Wall -Werror -I. -c test/fake_syscalls.c -o /tmp/fs.o
 rm /tmp/fs.o
 ```
 
@@ -5712,7 +5740,7 @@ jobs:
 
       - name: Run cppcheck on project sources
         run: |
-          # Only our code — not vendored third_party or test/unity.
+          # Only our code — not vendored third_party.
           cppcheck \
             --enable=warning,style,performance,portability \
             --std=c89 \
@@ -5720,7 +5748,7 @@ jobs:
             --inline-suppr \
             --suppress=missingIncludeSystem \
             --suppress=unusedFunction \
-            -I src -I src_pane -I render -I mdparse -I scanner \
+            -I . \
             -I third_party/md4c/src \
             src/ src_pane/ render/ mdparse/ scanner/
 
@@ -5740,7 +5768,6 @@ jobs:
           find src src_pane render mdparse scanner \
                -name '*.c' -o -name '*.h' \
             | grep -v 'third_party/' \
-            | grep -v 'test/unity/' \
             | xargs clang-format --dry-run --Werror
 ```
 
@@ -5768,87 +5795,26 @@ C89 as the dialect; findings fail the job. clang-format --dry-run
 Chromium's preset with ColumnLimit=88 and sort-includes off (C89
 include order matters for Toolbox headers).
 
-Neither check runs against third_party/ or test/unity/.
+Neither check runs against third_party/.
 ```
 
 ---
 
-### Task 48: CodeQL workflow
+### Task 48: CodeQL via GitHub Default Setup (no workflow file)
 
-**Files:**
-- Create: `.github/workflows/codeql.yml`
+**Files:** none (configuration lives in GitHub repo settings, not in the repo).
 
-GitHub's CodeQL static analysis on the host build. Covers portable C code (all of render, mdparse, scanner, doc, debounce, file_io data-path, arena). Cross-build is deliberately NOT analyzed here — CodeQL would need the cross-toolchain in CodeQL's build mode, which adds complexity without meaningful extra signal since the cross and host compile the same module sources.
+CodeQL static analysis is enabled through GitHub's [Default Setup for Code Scanning](https://docs.github.com/en/code-security/code-scanning/enabling-code-scanning/configuring-default-setup-for-code-scanning). No workflow YAML to maintain; GitHub manages query suites and build detection automatically. Results surface on the repository's Security tab.
 
-- [ ] **Step 48.1: Create `.github/workflows/codeql.yml`**
+Default Setup runs the same CodeQL engine and query suites an advanced workflow would use. Given the project's plain-C Makefile build and lack of custom queries, there's no benefit to maintaining a hand-written workflow — upgrades to `github/codeql-action` versions, CodeQL pack versions, and query additions all happen without our involvement.
 
-```yaml
-name: codeql
+- [ ] **Step 48.1: Enable Default Setup in GitHub UI**
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-  schedule:
-    # Weekly full-history scan to catch issues as CodeQL's queries evolve.
-    - cron: '17 6 * * 1'
+Repository Settings → Code security → Code scanning → *Default* → Enable.
 
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
+- [ ] **Step 48.2: No commit**
 
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [ 'c-cpp' ]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          queries: +security-and-quality
-
-      - name: Build (host)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential
-          make -f Makefile.hosttests all
-
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: "/language:${{ matrix.language }}"
-```
-
-- [ ] **Step 48.2: Commit**
-
-```bash
-git add .github/workflows/codeql.yml
-```
-
-Then `git-commit` with message:
-
-```
-Add CodeQL workflow for static analysis
-
-Runs on push/PR plus weekly schedule. Analyzes the host build (all
-portable modules). Uses the security-and-quality suite for a broader
-net than the default security-only queries. Results post to the
-Security tab; findings don't fail the workflow by default.
-
-Cross-build is not analyzed here — it would need the Retro68
-toolchain inside the CodeQL build step, adding significant complexity
-without meaningful additional signal (cross and host compile the
-same .c files).
-```
+This step touches no repo files. Skip directly to Task 49.
 
 ---
 
@@ -5988,10 +5954,10 @@ Update the stub README (created in Task 2) with workflow badges and a brief CI s
 ```markdown
 # Armadillo Editor
 
-[![host-tests](https://github.com/OWNER/REPO/actions/workflows/host-tests.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/host-tests.yml)
-[![lint](https://github.com/OWNER/REPO/actions/workflows/lint.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/lint.yml)
-[![codeql](https://github.com/OWNER/REPO/actions/workflows/codeql.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/codeql.yml)
-[![release](https://github.com/OWNER/REPO/actions/workflows/release.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/release.yml)
+[![host-tests](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/host-tests.yml)
+[![lint](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/lint.yml)
+[![codeql](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/codeql.yml)
+[![release](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml/badge.svg)](https://github.com/manufarfaro/armadillo-editor/actions/workflows/release.yml)
 
 A System 7 markdown editor for 68030-and-up classic Macintosh. Cross-compiled with [Retro68](https://github.com/autc04/Retro68).
 
@@ -6065,22 +6031,7 @@ See `CLAUDE.md` for the load-bearing rules (flat block model, single-parse-two-c
 TBD.
 ```
 
-**Note on the badge URLs:** the placeholders `OWNER/REPO` need to be replaced with the actual GitHub owner and repo name once the remote is configured. The task below captures this as an explicit sub-step.
-
-- [ ] **Step 50.2: Substitute actual GitHub coordinates in the badge URLs**
-
-At plan-execution time:
-
-```bash
-# Replace OWNER with the GitHub owner (username or org) and REPO with the repo name.
-# Example: if the repo is github.com/manufarfaro/armadillo-editor, run:
-sed -i.bak 's|github.com/OWNER/REPO|github.com/manufarfaro/armadillo-editor|g' README.md
-rm README.md.bak
-```
-
-If the repo doesn't have a remote yet, skip this step and leave `OWNER/REPO` as a placeholder; run the `sed` once the remote is set. The badges render "no status" until the remote exists and the workflows have run at least once.
-
-- [ ] **Step 50.3: Commit**
+- [ ] **Step 50.2: Commit**
 
 ```bash
 git add README.md
@@ -6096,8 +6047,7 @@ the Actions page for each workflow. Local + Docker-based cross-
 compile instructions. Brief CI section describing each workflow's
 runtime and the tag-based release flow.
 
-Badge URLs use OWNER/REPO placeholders; replaced at push-to-remote
-time via the sed command documented in the README itself.
+Badge URLs point at github.com/manufarfaro/armadillo-editor.
 ```
 
 ---

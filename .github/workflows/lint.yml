@@ -1,0 +1,42 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Style note: this project uses hand-formatted MPW C / THINK C era style
+# (column-aligned declarations, one-line OSErr-style guards, multi-statement
+# `{ stmt1; stmt2; }` short blocks, trailing comments aligned across non-
+# adjacent lines). Modern formatters (clang-format, uncrustify) cannot fully
+# preserve those patterns — they treat the style as drift and reformat away
+# from it. We therefore do not run a formatter check in CI; the `.clang-format`
+# file is kept as an editor hint only. cppcheck below is the actual lint gate
+# and catches semantic and style issues that a formatter would miss anyway.
+
+jobs:
+  cppcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+
+      - name: Run cppcheck on project sources
+        run: |
+          cppcheck \
+            --enable=warning,style,performance,portability \
+            --std=c89 \
+            --error-exitcode=1 \
+            --inline-suppr \
+            --suppress=missingIncludeSystem \
+            --suppress=unusedFunction \
+            --suppress=variableScope \
+            --suppress=constVariablePointer \
+            -I . \
+            -I third_party/md4c/src \
+            src/ src_pane/ render/ mdparse/ scanner/

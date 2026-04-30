@@ -10,7 +10,7 @@ Ordered TDD task list. Groups run in sequence; tasks within a group can be paral
 - [ ] 0.4 Create `CMakeLists.txt` stub that builds an empty `ArmadilloEditor.APPL` (opens a window, handles quit)
 - [ ] 0.5 Create `armadillo.r` stub with minimal `'MBAR'` + File/Edit menus (enough to Quit)
 - [ ] 0.6 Create `Makefile.hosttests` stub with `make clean` working
-- [ ] 0.7 Vendor Unity test framework under `test/unity/` (pin to version; see reference project)
+- [ ] 0.7 Vendor Unity test framework under `third_party/unity/` (pin to version; see reference project)
 - [ ] 0.8 Vendor md4c under `third_party/md4c/` at a specific commit; record the commit SHA in `third_party/md4c/COMMIT.txt`
 - [ ] 0.9 Create `src/mac_syscalls.h` with the `MacSyscalls` struct declaration (function-pointer fields; no implementations yet)
 - [ ] 0.10 Create `test/fake_syscalls.c/h` with `FakeSyscalls` struct and `fake_syscalls_init()` returning sensible defaults
