@@ -7,6 +7,14 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege at workflow level: cross-build only reads source and
+# uploads run-scoped workflow artifacts (no extra permission required).
+# The `release` job below escalates to `contents: write` at job level
+# because creating GitHub Releases requires writing the repo's release
+# history; that elevation is scoped to that one job only.
+permissions:
+  contents: read
+
 jobs:
   cross-build:
     runs-on: ubuntu-latest
