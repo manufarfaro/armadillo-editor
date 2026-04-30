@@ -410,12 +410,12 @@ size_t arena_capacity(const Arena*);
 ```c
 /* render/arena.c — internals */
 struct Arena {
-    Handle              backing;
-    char*               base;      /* = *backing while HLocked */
-    size_t              size;      /* current Handle size */
-    size_t              high_water;
-    size_t              max_ever;
-    const MacSyscalls*  sys;
+    Handle      backing;
+    char*       base;      /* = *backing while HLocked */
+    size_t      size;      /* current Handle size */
+    size_t      high_water;
+    size_t      max_ever;
+    MacSyscalls sys;       /* by-value copy taken at arena_init */
 };
 
 #define kArenaInitialSize    ( 8u * 1024u)
@@ -423,6 +423,8 @@ struct Arena {
 #define kArenaLinearStep     (32u * 1024u)
 #define kArenaHardCap       (512u * 1024u)
 ```
+
+The `MacSyscalls` field is stored by value, not as a pointer. `arena_init` takes a `const MacSyscalls*` parameter and copies `*sys` into the field at init. After that the `Arena` owns its private 80-byte snapshot and does not depend on the caller's storage lifetime. This eliminates the lifetime-coupling bug that an earlier draft (with a `const MacSyscalls*` field) introduced — see `openspec/changes/arena-owns-macsyscalls/` for the follow-up change that established this rule.
 
 ### 4.3 Four policy decisions
 
