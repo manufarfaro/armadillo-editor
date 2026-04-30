@@ -2,12 +2,12 @@
 
 **Date:** 2026-04-30
 **Status:** Approved, ready for implementation plan
-**Scope:** All non-host-testable modules of the MVP plus on-device verification and release infrastructure. Splits into milestones `v0.1.0` (Plan 2a) and `v1.0.0` (Plan 2b).
+**Scope:** All non-host-testable modules of the MVP plus on-device verification and release infrastructure. Splits into milestones `v0.1.0` (Plan 2a) and `v0.2.0` (Plan 2b).
 
 This document captures the architectural decisions for Plan 2. The bite-sized TDD-style tasks live in separate plan files:
 
 - `plan-2a-bare-shell.md` — bare-boot `.APPL` with empty editor pane → tag `v0.1.0`
-- `plan-2b-mvp-features.md` — file I/O, view toggle, parse cycle, syntax coloring, smoke test → tag `v1.0.0`
+- `plan-2b-mvp-features.md` — file I/O, view toggle, parse cycle, syntax coloring, smoke test → tag `v0.2.0`
 
 The global architecture doc (`design.md`) remains the source of truth for the overall system; this file is the Plan-2-specific addendum.
 
@@ -19,7 +19,7 @@ Deliver the MVP of Armadillo Editor as a shippable `.APPL`: opens a `.md` file, 
 
 Plan 1's safety net was host TDD — every module had Unity tests run before any commit landed. Plan 2 has zero host tests for its modules (TextEdit, windows, menus, real QuickDraw, the Standard File package — all require live Toolbox). The equivalent risk-mitigation is a smaller intermediate ship.
 
-`v0.1.0` (Plan 2a) gets a `.APPL` that boots on Quadra, opens an editor window with a typeable empty source pane, closes cleanly, and quits. If that boots, the foundational Toolbox-init / event-loop / window-creation / menu-dispatch / `src_pane` plumbing is verified before any of the runtime complexity (file I/O, parse cycles, view toggle) stacks on top. `v1.0.0` (Plan 2b) layers the real features onto the now-known-good shell.
+`v0.1.0` (Plan 2a) gets a `.APPL` that boots on Quadra, opens an editor window with a typeable empty source pane, closes cleanly, and quits. If that boots, the foundational Toolbox-init / event-loop / window-creation / menu-dispatch / `src_pane` plumbing is verified before any of the runtime complexity (file I/O, parse cycles, view toggle) stacks on top. `v0.2.0` (Plan 2b) layers the real features onto the now-known-good shell.
 
 A single Plan 2 covering everything would mean every Toolbox bug surfaces at once, mixed with feature bugs, against the same `.APPL` build. The split contains blast radius.
 
@@ -34,7 +34,7 @@ A single Plan 2 covering everything would mean every Toolbox bug surfaces at onc
 | `src_pane/src_pane.c` | new (header `src_pane.h` already exists) | `TENew`-backed editable pane behind the vendor-free `src_pane.h` API; `src_pane_handle_event` forwards to `TEKey` / `TEClick`; `src_pane_apply_runs` walks the `StyleRun[]` and calls `TESetStyle`; `src_pane_draw` calls `TEUpdate` | 2a (no styling) + 2b (apply runs) |
 | `render/draw_qd_real.c/.h` | new | Real `DrawOps` vtable: thin forwarders to `SetFont` / `MoveTo` / `DrawText` / `LineTo` / `FrameRect` / `GetFontInfo`, plus `RGBForeColor` for `set_fg` | 2a (struct exists, exercised indirectly via TextEdit) + 2b (used directly by `render_layout_and_draw`) |
 | `src/file_io.c` | extend existing | Replace the Plan 1 `kFileIoErrCancel` stubs in `file_io_open_interactive` and `file_io_save_as` with real `StandardGetFile` / `StandardPutFile` flows that delegate to existing `file_io_open` / `file_io_save` data paths | 2b |
-| `test/smoke_test.c` | new test app | Separate `.APPL` (second CMake target). Hardcoded sequence: open a bundled fixture `.md`, validate `doc_text()` length, run a parse cycle through the real arena + render, save to `Smoketest.md` next to the app, exit. Manual-eyeball verification on QEMU before tagging `v1.0.0` | 2b |
+| `test/smoke_test.c` | new test app | Separate `.APPL` (second CMake target). Hardcoded sequence: open a bundled fixture `.md`, validate `doc_text()` length, run a parse cycle through the real arena + render, save to `Smoketest.md` next to the app, exit. Manual-eyeball verification on QEMU before tagging `v0.2.0` | 2b |
 
 Two architectural rules from earlier work are preserved:
 
@@ -127,7 +127,7 @@ Unscripted-but-deterministic verification was deliberately preferred over script
 
 Existing `release.yml` already triggers on `v*` tags and uploads `.APPL` + `.dsk` to a GitHub Release with auto-generated notes. Plan 2 reuses it without changes.
 
-- **Versioning:** semver. `v0.1.0` = Plan 2a complete. `v1.0.0` = Plan 2b complete (MVP shipped). Patch bumps (`v1.0.1`) reserved for hotfixes; minor bumps for additive non-breaking features post-MVP; major bumps for breaking compat changes.
+- **Versioning:** semver, staying in the 0.x range while the editor evolves toward stability. `v0.1.0` = Plan 2a complete. `v0.2.0` = Plan 2b complete (MVP shipped). Subsequent post-MVP feature drops bump the minor (`v0.3.0`, `v0.4.0`, …); patch bumps (`v0.2.1`) are reserved for hotfixes against a tagged release. `v1.0.0` is deliberately deferred — it signals an API/format stability commitment the project isn't ready to make yet.
 - **Tagging:** `git tag v0.1.0 && git push --tags` after the corresponding QA checklist passes. Tags are SSH-signed via 1Password (per repo convention).
 - **Branches:** no release branches. Single `main` line, semver tags only. Hotfix tags land on `main`.
 - **`'vers' (1)` resource:** `armadillo.r` includes a `vers` resource hand-edited per release so Finder "Get Info" shows the human-readable version. Bumped in the same commit as the tag.
@@ -145,7 +145,7 @@ Existing `release.yml` already triggers on `v*` tags and uploads `.APPL` + `.dsk
 6. ⌘Q quits cleanly without crashing.
 7. Tag `v0.1.0` pushed; GitHub Release auto-published with `.APPL` and `.dsk` attached.
 
-### Plan 2b (`v1.0.0`)
+### Plan 2b (`v0.2.0`)
 
 8. `File → Open…` opens any `.md` ≤ 32 KB; contents appear in source pane.
 9. Editing a loaded doc triggers debounced parse (≥ 250 ms idle); syntax coloring appears on heading / bold / italic / link / code-span tokens.
@@ -153,7 +153,7 @@ Existing `release.yml` already triggers on `v*` tags and uploads `.APPL` + `.dsk
 11. `File → Save` writes to the open file; `File → Save As…` writes to a new location and updates the doc's filename.
 12. Closing a dirty window prompts the unsaved-changes alert (Save / Discard / Cancel).
 13. `smoke_test.APPL` runs unattended on QEMU: opens fixture, parses, renders, saves to `Smoketest.md`, exits cleanly.
-14. Tag `v1.0.0` pushed; GitHub Release auto-published.
+14. Tag `v0.2.0` pushed; GitHub Release auto-published.
 
 ## Out of scope (deferred to later tiers)
 
