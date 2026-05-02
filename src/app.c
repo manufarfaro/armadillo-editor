@@ -23,6 +23,121 @@
 #include <TextEdit.h>
 #include <Dialogs.h>
 #include <Events.h>
+#include "src/mac_syscalls.h"
+#include <MacMemory.h>
+#include <Files.h>
+#include <StandardFile.h>
+#include <Gestalt.h>
+
+/* Real Toolbox wrappers used by the production MacSyscalls vtable.
+ *
+ * Each wrapper is a thin static forwarder: the function pointer in
+ * MacSyscalls has a project-owned signature (no Toolbox types in the
+ * header), so the wrapper does the cast back to FSSpecPtr / Handle /
+ * etc. The actual Toolbox call sits at the bottom of each wrapper.
+ *
+ * This is the ONLY place in the codebase that calls these Toolbox
+ * routines directly. Everywhere else dispatches through the vtable. */
+
+static unsigned long real_tick_count(void) {
+    return TickCount();
+}
+
+static void* real_new_handle(long size) {
+    return (void*)NewHandle(size);
+}
+
+static void real_dispose_handle(void* h) {
+    if (h) DisposeHandle((Handle)h);
+}
+
+static void real_hlock(void* h) {
+    if (h) HLock((Handle)h);
+}
+
+static void real_hunlock(void* h) {
+    if (h) HUnlock((Handle)h);
+}
+
+static int real_set_handle_size(void* h, long size) {
+    if (!h) return -1;
+    SetHandleSize((Handle)h, size);
+    return MemError() == noErr ? 0 : -1;
+}
+
+static short real_mem_error(void) {
+    return MemError();
+}
+
+static short real_fsp_open_df(const void* spec, char perm, short* out_ref) {
+    return FSpOpenDF((const FSSpec*)spec, perm, out_ref);
+}
+
+static short real_fs_close(short ref) {
+    return FSClose(ref);
+}
+
+static short real_fs_read(short ref, long* io_count, void* buf) {
+    return FSRead(ref, io_count, buf);
+}
+
+static short real_fs_write(short ref, long* io_count, const void* buf) {
+    return FSWrite(ref, io_count, buf);
+}
+
+static short real_get_eof(short ref, long* out_size) {
+    return GetEOF(ref, out_size);
+}
+
+static short real_set_eof(short ref, long size) {
+    return SetEOF(ref, size);
+}
+
+static short real_set_fpos(short ref, short mode, long off) {
+    return SetFPos(ref, mode, off);
+}
+
+static short real_fsp_create(const void* spec, unsigned long creator,
+                             unsigned long type, short script) {
+    return FSpCreate((const FSSpec*)spec, creator, type, script);
+}
+
+static void real_standard_get_file(void* out_spec, int* out_good) {
+    StandardFileReply reply;
+    StandardGetFile(0L, -1, 0L, &reply);
+    if (out_spec && reply.sfGood) *(FSSpec*)out_spec = reply.sfFile;
+    if (out_good) *out_good = reply.sfGood ? 1 : 0;
+}
+
+static void real_standard_put_file(const char* prompt, const char* defname,
+                                   void* out_spec, int* out_good) {
+    StandardFileReply reply;
+    StandardPutFile((ConstStr255Param)prompt, (ConstStr255Param)defname, &reply);
+    if (out_spec && reply.sfGood) *(FSSpec*)out_spec = reply.sfFile;
+    if (out_good) *out_good = reply.sfGood ? 1 : 0;
+}
+
+static short real_gestalt(unsigned long selector, long* out_response) {
+    return Gestalt((OSType)selector, out_response);
+}
+
+static short real_note_alert(short id, void* filter) {
+    return NoteAlert(id, (ModalFilterUPP)filter);
+}
+
+static short real_stop_alert(short id, void* filter) {
+    return StopAlert(id, (ModalFilterUPP)filter);
+}
+
+static const MacSyscalls g_real_syscalls = {
+    real_tick_count,
+    real_new_handle, real_dispose_handle, real_hlock, real_hunlock,
+    real_set_handle_size, real_mem_error,
+    real_fsp_open_df, real_fs_close, real_fs_read, real_fs_write,
+    real_get_eof, real_set_eof, real_set_fpos, real_fsp_create,
+    real_standard_get_file, real_standard_put_file,
+    real_gestalt, real_note_alert, real_stop_alert
+};
 
 static void toolbox_init(void) {
     InitGraf(&qd.thePort);
