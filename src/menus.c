@@ -9,6 +9,7 @@
 #include "src/win_editor.h"
 #include <Menus.h>
 #include <Resources.h>
+#include <Dialogs.h>
 
 #define kMenuApple   128
 #define kMenuFile    129
@@ -39,6 +40,12 @@ MenuAction menus_handle_command(long menu_select, WinEditor* win,
     (void)win; (void)sys;       /* Step 12+ uses these */
 
     switch (menu) {
+    case kMenuApple:
+        if (item == 1) {
+            (void)Alert(256, 0L);   /* About box */
+        }
+        /* item 2 is the separator; items 3+ are DAs (handled by OS). */
+        break;
     case kMenuFile:
         switch (item) {
         case kFileQuit:  action = kMenuActionQuit;  break;
