@@ -4,11 +4,11 @@
 
 **Goal:** Boot a Quadra-targeted `.APPL` that opens an empty editor window with a TextEdit-backed source pane, accepts typing, closes cleanly via the window go-away box and File → Close, and quits via ⌘Q / File → Quit. No file I/O, no view toggle, no parse cycle. Ship as `v0.1.0`.
 
-**Architecture:** Single-document Mac System 7 app. `src/app.c` owns Toolbox init, the production `MacSyscalls` struct, and the `WaitNextEvent` loop. `src/menus.c` handles menu-bar dispatch. `src/win_editor.c` owns the editor window and one `SrcPane`. `src_pane/src_pane.c` is a `TENew`-backed editable pane behind the vendor-free `src_pane.h` API. `render/draw_qd_real.c` is the real-QuickDraw `DrawOps` vtable (compiled but not yet used by anyone in 2a — `src_pane` calls TextEdit's own drawing). All modules continue the per-call vs. long-lived `MacSyscalls` rule from Plan 1.
+**Architecture:** Single-document Mac System 7 app. `src/app.c` owns Toolbox init, the production `MacSyscalls` struct, and the `WaitNextEvent` loop. `src/menus.c` handles menu-bar dispatch. `src/win_editor.c` owns the editor window and one `SrcPane`. `src_pane/src_pane.c` is a `TENew`-backed editable pane behind the vendor-free `src_pane.h` API. `render/draw_qd.c` is the real-QuickDraw `DrawOps` vtable (compiled but not yet used by anyone in 2a — `src_pane` calls TextEdit's own drawing). All modules continue the per-call vs. long-lived `MacSyscalls` rule from Plan 1.
 
 **Tech Stack:** Retro68 GCC (m68k-apple-macos), C89, Mac Toolbox (System 7), TextEdit, QuickDraw, Standard File (only the headers in 2a), Rez, CMake. Build runs in `ghcr.io/autc04/retro68:latest`. No host tests — Plan 2a modules are Toolbox-only.
 
-**Pragmatic deviation from `app-shell` spec:** the spec reads "every other module that touches the OS SHALL accept a `const MacSyscalls*` parameter, never calling the Toolbox directly." For Plan 2 modules (`menus`, `win_editor`, `src_pane`, `draw_qd_real`) — which are themselves Toolbox-internal-by-nature and not host-testable — direct Toolbox calls inside their `.c` files are acceptable. They still **take and pass through** `const MacSyscalls* sys` to subordinate Plan 1 modules (`file_io`, `debounce`, `arena`) so the test seam continues to work where it matters. This deviation is recorded in the design log at the bottom of `plan-2-design.md`.
+**Pragmatic deviation from `app-shell` spec:** the spec reads "every other module that touches the OS SHALL accept a `const MacSyscalls*` parameter, never calling the Toolbox directly." For Plan 2 modules (`menus`, `win_editor`, `src_pane`, `draw_qd`) — which are themselves Toolbox-internal-by-nature and not host-testable — direct Toolbox calls inside their `.c` files are acceptable. They still **take and pass through** `const MacSyscalls* sys` to subordinate Plan 1 modules (`file_io`, `debounce`, `arena`) so the test seam continues to work where it matters. This deviation is recorded in the design log at the bottom of `plan-2-design.md`.
 
 ---
 
@@ -25,8 +25,8 @@
 | `src/win_editor.h` | Create | Opaque `WinEditor*` API: `win_editor_new`, `win_editor_free`, `win_editor_handle_event`, `win_editor_close`, `win_editor_window_ref` |
 | `src/win_editor.c` | Create | Owns one `SrcPane*`, opens `WIND` 128, lays out source-pane bounds, dispatches mouse/key/update/activate, by-value `MacSyscalls` field |
 | `src_pane/src_pane.c` | Create | TextEdit-backed implementation of the existing `src_pane.h` API; `TENew`, `TEKey`, `TEClick`, `TEActivate`, `TEDeactivate`, `TEUpdate`, `TEDispose`; by-value `MacSyscalls` field |
-| `render/draw_qd_real.h` | Create | `draw_qd_real_make_context(GrafPtr)` returning a `DrawContext` with the real QuickDraw vtable |
-| `render/draw_qd_real.c` | Create | Forwarders to `SetFont`/`MoveTo`/`DrawText`/`LineTo`/`FrameRect`/`GetFontInfo` and `RGBForeColor` |
+| `render/draw_qd.h` | Create | `draw_qd_make_context(GrafPtr)` returning a `DrawContext` with the real QuickDraw vtable |
+| `render/draw_qd.c` | Create | Forwarders to `SetFont`/`MoveTo`/`DrawText`/`LineTo`/`FrameRect`/`GetFontInfo` and `RGBForeColor` |
 | `openspec/changes/add-md-editor-mvp/qa-checklist-2a.md` | Create | Manual QA checklist for the QEMU smoke run before tagging `v0.1.0` |
 
 No new tests (no host-testable code). No header changes to `src_pane.h`, `mac_syscalls.h`, or any Plan 1 file.
@@ -293,7 +293,7 @@ add_application(ArmadilloEditor
     # Renderer + pipeline (Plan 1)
     render/arena.c
     render/render.c
-    render/draw_qd_real.c
+    render/draw_qd.c
     mdparse/mdparse.c
     scanner/scanner.c
 
@@ -332,7 +332,7 @@ SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.s
 
 Uncomment Plan 1 sources (render, mdparse, scanner, doc, debounce,
 file_io) and add Plan 2a sources (app, menus, win_editor, src_pane,
-draw_qd_real). The listed .c files don't exist yet; subsequent tasks
+draw_qd). The listed .c files don't exist yet; subsequent tasks
 create each file as a stub-then-real implementation. Cross-build will
 fail until those land — that's expected."
 ```
@@ -343,17 +343,17 @@ fail until those land — that's expected."
 
 Tasks 3–7 create one stub `.c` (and `.h` where applicable) per module, each with empty/no-op function bodies. After the group is complete, the cross-build links and produces a `.APPL` that does nothing (its `main()` returns 0 immediately). The point of this group is to lock in module boundaries and signatures before behavior is added.
 
-### Task 3: `render/draw_qd_real.{h,c}` skeleton
+### Task 3: `render/draw_qd.{h,c}` skeleton
 
 **Files:**
-- Create: `render/draw_qd_real.h`
-- Create: `render/draw_qd_real.c`
+- Create: `render/draw_qd.h`
+- Create: `render/draw_qd.c`
 
-- [ ] **Step 1: Create the header `render/draw_qd_real.h`**
+- [ ] **Step 1: Create the header `render/draw_qd.h`**
 
 ```c
 /*
- * render/draw_qd_real.h — real-QuickDraw DrawOps vtable.
+ * render/draw_qd.h — real-QuickDraw DrawOps vtable.
  *
  * Production wiring of the DrawOps test seam. The vtable is filled
  * with thin forwarders to QuickDraw + the Color Manager. Used by the
@@ -371,16 +371,16 @@ Tasks 3–7 create one stub `.c` (and `.h` where applicable) per module, each wi
 /* Build a DrawContext that draws into the supplied GrafPort.
  * The port pointer is opaque here (vendor-free header) — caller passes
  * a WindowPtr (which IS-A GrafPtr in Toolbox terms) cast to void*. */
-DrawContext draw_qd_real_make_context(void* grafport_opaque);
+DrawContext draw_qd_make_context(void* grafport_opaque);
 
 #endif /* ARMA_DRAW_QD_REAL_H */
 ```
 
-- [ ] **Step 2: Create the skeleton implementation `render/draw_qd_real.c`**
+- [ ] **Step 2: Create the skeleton implementation `render/draw_qd.c`**
 
 ```c
 /*
- * render/draw_qd_real.c — real-QuickDraw DrawOps vtable (skeleton).
+ * render/draw_qd.c — real-QuickDraw DrawOps vtable (skeleton).
  *
  * Plan 2a: DrawOps callbacks are present but no-op (they cast the
  * grafport and return). Plan 2b fills them in with real QuickDraw
@@ -388,7 +388,7 @@ DrawContext draw_qd_real_make_context(void* grafport_opaque);
  * and RGBForeColor for set_fg. The skeleton lets us include this in
  * the build now without exercising any unfinished behaviour.
  */
-#include "draw_qd_real.h"
+#include "draw_qd.h"
 
 static void real_set_font(void* ctx, short font_id, short size,
                           unsigned char face) {
@@ -424,14 +424,14 @@ static void real_get_font_metrics(void* ctx, short* a, short* d, short* h) {
     if (h) *h = 16;
 }
 
-static const DrawOps g_real_ops = {
+static const DrawOps g_qd_ops = {
     real_set_font, real_set_fg, real_move_to, real_draw_text,
     real_line, real_frame_rect, real_get_font_metrics
 };
 
-DrawContext draw_qd_real_make_context(void* grafport_opaque) {
+DrawContext draw_qd_make_context(void* grafport_opaque) {
     DrawContext ctx;
-    ctx.ops = &g_real_ops;
+    ctx.ops = &g_qd_ops;
     ctx.ctx = grafport_opaque;
     return ctx;
 }
@@ -441,9 +441,9 @@ DrawContext draw_qd_real_make_context(void* grafport_opaque) {
 
 ```bash
 SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git add render/draw_qd_real.h render/draw_qd_real.c
+  git add render/draw_qd.h render/draw_qd.c
 SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" \
-  git commit -m "feat(render): add draw_qd_real DrawOps skeleton
+  git commit -m "feat(render): add draw_qd DrawOps skeleton
 
 Stub implementation of the real-QuickDraw DrawOps vtable. Callbacks
 are present but no-op; metrics return sane defaults (12/3/16) so any
@@ -999,7 +999,7 @@ static short real_stop_alert(short id, void* filter) {
     return StopAlert(id, (ModalFilterUPP)filter);
 }
 
-static const MacSyscalls g_real_syscalls = {
+static const MacSyscalls g_syscalls = {
     real_tick_count,
     real_new_handle, real_dispose_handle, real_hlock, real_hunlock,
     real_set_handle_size, real_mem_error,
@@ -1017,7 +1017,7 @@ docker run --rm -v "$PWD":/work -w /work ghcr.io/autc04/retro68:latest \
   bash -c "cd build && make ArmadilloEditor 2>&1 | tail -20"
 ```
 
-Expected: clean compile. The `g_real_syscalls` struct is unreferenced for now (linker may warn — `-ffunction-sections + --gc-sections` strips the unused wrappers from the final binary). That's fine; the next step uses it.
+Expected: clean compile. The `g_syscalls` struct is unreferenced for now (linker may warn — `-ffunction-sections + --gc-sections` strips the unused wrappers from the final binary). That's fine; the next step uses it.
 
 - [ ] **Step 3: Commit**
 
@@ -1030,7 +1030,7 @@ SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.s
 Twenty thin static wrappers around the Toolbox routines that the
 test seam covers (TickCount, NewHandle/HLock/SetHandleSize, FSp*,
 StandardGetFile/StandardPutFile, Gestalt, NoteAlert/StopAlert).
-g_real_syscalls is the file-scope static struct that gets passed to
+g_syscalls is the file-scope static struct that gets passed to
 every module needing OS access. This is the ONLY place in the code
 that calls these Toolbox routines directly."
 ```
@@ -1182,7 +1182,7 @@ static void event_loop(void) {
                 long sel = MenuSelect(ev.where);
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, 0,
-                                                          &g_real_syscalls);
+                                                          &g_syscalls);
                     if (act == kMenuActionQuit) g_quit_requested = 1;
                 }
             }
@@ -1239,7 +1239,7 @@ case autoKey: {
         long sel = MenuKey(ch);
         if (sel) {
             MenuAction act = menus_handle_command(sel, 0,
-                                                  &g_real_syscalls);
+                                                  &g_syscalls);
             if (act == kMenuActionQuit) g_quit_requested = 1;
         }
     }
@@ -1724,7 +1724,7 @@ Replace the entire `mouseDown` case in `event_loop` with:
                 long sel = MenuSelect(ev.where);
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, g_front_window,
-                                                          &g_real_syscalls);
+                                                          &g_syscalls);
                     if (act == kMenuActionQuit)  g_quit_requested = 1;
                     if (act == kMenuActionClose && g_front_window) {
                         win_editor_close(g_front_window);

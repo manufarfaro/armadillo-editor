@@ -166,7 +166,7 @@ Acyclic, layered. No module calls a module that depends on it.
 - **`src/doc`** — dumb data container: source text buffer, filename (as FSSpec or equivalent), dirty flag.
 - **`src/file_io`** — Standard File Open / Save wrappers plus raw file-manager I/O for `.md` bytes.
 - **`src/debounce`** — pure state machine: takes keystroke notifications and clock ticks, decides when to fire a parse.
-- **`src/draw_qd_real`** — production `DrawOps` vtable: translates vtable calls into real QuickDraw.
+- **`src/draw_qd`** — production `DrawOps` vtable: translates vtable calls into real QuickDraw.
 - **`src_pane/`** — opaque editable-text-pane API; MVP internally TE-backed; future replacement is a custom piece-table engine.
 - **`mdparse/`** — wraps md4c's `md_parse` behind a `MdParseSink` fan-out interface; hides md4c from the rest of the codebase.
 - **`scanner/`** — `MdParseSink` implementation: accumulates `MdStyleRun` tuples for source-pane syntax coloring.
@@ -178,7 +178,7 @@ Where mocks plug in and production code never knows the difference.
 
 1. **`src/mac_syscalls.h`** — a struct of function pointers wrapping every Toolbox call used anywhere (`NewWindow`, `TESetStyle`, `StandardGetFile`, `NewHandle`, `HLock`, `TickCount`, `Gestalt`, `PBControlSync`, …). Any module that touches the OS takes `const MacSyscalls*` as a parameter and dispatches through it. Host tests inject a struct of fakes; production uses the real wrappers from `src/app.c`. This is the same pattern as the hello-world reference project.
 
-2. **`render/draw_qd.h`** — the renderer never calls QuickDraw directly. It calls through a `DrawOps` vtable (`set_font`, `set_fg`, `move_to`, `draw_text`, `line`, `frame_rect`, `get_font_metrics`). Production wires this to `src/draw_qd_real.c`; tests wire it to a recording sink that captures every call into an array for assertion.
+2. **`render/draw_qd.h`** — the renderer never calls QuickDraw directly. It calls through a `DrawOps` vtable (`set_font`, `set_fg`, `move_to`, `draw_text`, `line`, `frame_rect`, `get_font_metrics`). Production wires this to `src/draw_qd.c`; tests wire it to a recording sink that captures every call into an array for assertion.
 
 3. **`mdparse/mdparse.h` — `MdParseSink`** — scanner and render both plug in as `MdParseSink` instances. Tests can bypass md4c entirely and feed synthetic event streams straight into scanner or render. This decouples render tests from md4c's parse behavior.
 
@@ -647,7 +647,7 @@ typedef struct DrawOps {
 typedef struct DrawContext { const DrawOps* ops; void* ctx; } DrawContext;
 ```
 
-Production: `src/draw_qd_real.c` wraps real QuickDraw.
+Production: `src/draw_qd.c` wraps real QuickDraw.
 Tests: `test/recorder.c` wraps a `Recorder` — a `malloc`-backed array of `RecordedCall` unions, one entry per vtable call.
 
 Render tests assert on the recorded call stream:
@@ -757,7 +757,7 @@ armadillo-editor/
 │   ├── win_editor.c/h
 │   ├── file_io.c/h               # ~200 lines, stays in src/
 │   ├── doc.c/h                   # ~120 lines, stays in src/
-│   ├── draw_qd_real.c/h          # production DrawOps wiring
+│   ├── draw_qd.c/h          # production DrawOps wiring
 │   ├── debounce.c/h
 │   ├── mac_syscalls.h
 │   └── smoke_test.c
@@ -812,7 +812,7 @@ add_application(ArmadilloEditor
     src/win_editor.c
     src/file_io.c
     src/doc.c
-    src/draw_qd_real.c
+    src/draw_qd.c
     src/debounce.c
     src_pane/src_pane.c
     render/arena.c
@@ -846,7 +846,7 @@ add_application(ArmadilloSmokeTest
     src/smoke_test.c
     src/file_io.c
     src/doc.c
-    src/draw_qd_real.c
+    src/draw_qd.c
     src_pane/src_pane.c
     render/arena.c
     render/render.c
@@ -953,7 +953,7 @@ Mirrors hello-world's Group structure. Full detail in `tasks.md`; summary:
 - **Group 1** — types + interfaces: headers only (mac_syscalls.h, draw_qd.h, blocks.h, inlines.h, Arena public API, SrcPane public API, Doc public API, MdParseSink shape).
 - **Group 2** — tests first: write every host unit test against the header-only interfaces. All tests fail at this point (link errors or empty implementations).
 - **Group 3** — implementations in dependency order: arena → doc → debounce → mdparse → scanner → render → file_io. Each module's implementation ends when its unit tests pass.
-- **Group 4** — Toolbox-coupled targets: src_pane (TE wrapper), draw_qd_real, win_editor, menus, app, file_io's Standard File parts.
+- **Group 4** — Toolbox-coupled targets: src_pane (TE wrapper), draw_qd, win_editor, menus, app, file_io's Standard File parts.
 - **Group 5** — resources: armadillo.r complete with all MBAR/MENU/ALRT/STR#/ICN# entries.
 - **Group 6** — smoke test: src/smoke_test.c exercising edit → parse → render → save.
 - **Group 7** — docs: README.md, CLAUDE.md, acceptance checklist.

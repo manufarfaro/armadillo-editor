@@ -37,7 +37,7 @@ add_application(ArmadilloEditor
     # Renderer + pipeline (Plan 1)
     render/arena.c
     render/render.c
-    render/draw_qd_real.c
+    render/draw_qd.c
     mdparse/mdparse.c
     scanner/scanner.c
 

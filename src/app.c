@@ -41,67 +41,67 @@
  * This is the ONLY place in the codebase that calls these Toolbox
  * routines directly. Everywhere else dispatches through the vtable. */
 
-static unsigned long real_tick_count(void) {
+static unsigned long app_tick_count(void) {
     return TickCount();
 }
 
-static void* real_new_handle(long size) {
+static void* app_new_handle(long size) {
     return (void*)NewHandle(size);
 }
 
-static void real_dispose_handle(void* h) {
+static void app_dispose_handle(void* h) {
     if (h) DisposeHandle((Handle)h);
 }
 
-static void real_hlock(void* h) {
+static void app_hlock(void* h) {
     if (h) HLock((Handle)h);
 }
 
-static void real_hunlock(void* h) {
+static void app_hunlock(void* h) {
     if (h) HUnlock((Handle)h);
 }
 
-static int real_set_handle_size(void* h, long size) {
+static int app_set_handle_size(void* h, long size) {
     if (!h) return -1;
     SetHandleSize((Handle)h, size);
     return MemError() == noErr ? 0 : -1;
 }
 
-static short real_mem_error(void) {
+static short app_mem_error(void) {
     return MemError();
 }
 
-static short real_fsp_open_df(const void* spec, char perm, short* out_ref) {
+static short app_fsp_open_df(const void* spec, char perm, short* out_ref) {
     /* FSpOpenDF's prototype takes non-const FSSpecPtr; same const-cast
-     * pattern as real_fsp_create. */
+     * pattern as app_fsp_create. */
     return FSpOpenDF((FSSpec*)(void*)spec, perm, out_ref);
 }
 
-static short real_fs_close(short ref) {
+static short app_fs_close(short ref) {
     return FSClose(ref);
 }
 
-static short real_fs_read(short ref, long* io_count, void* buf) {
+static short app_fs_read(short ref, long* io_count, void* buf) {
     return FSRead(ref, io_count, buf);
 }
 
-static short real_fs_write(short ref, long* io_count, const void* buf) {
+static short app_fs_write(short ref, long* io_count, const void* buf) {
     return FSWrite(ref, io_count, buf);
 }
 
-static short real_get_eof(short ref, long* out_size) {
+static short app_get_eof(short ref, long* out_size) {
     return GetEOF(ref, out_size);
 }
 
-static short real_set_eof(short ref, long size) {
+static short app_set_eof(short ref, long size) {
     return SetEOF(ref, size);
 }
 
-static short real_set_fpos(short ref, short mode, long off) {
+static short app_set_fpos(short ref, short mode, long off) {
     return SetFPos(ref, mode, off);
 }
 
-static short real_fsp_create(const void* spec, unsigned long creator,
+static short app_fsp_create(const void* spec, unsigned long creator,
                              unsigned long type, short script) {
     /* FSpCreate's prototype takes a non-const FSSpecPtr. The const-cast
      * away here matches every other Mac codebase — the Toolbox routine
@@ -109,14 +109,14 @@ static short real_fsp_create(const void* spec, unsigned long creator,
     return FSpCreate((FSSpec*)(void*)spec, creator, type, script);
 }
 
-static void real_standard_get_file(void* out_spec, int* out_good) {
+static void app_standard_get_file(void* out_spec, int* out_good) {
     StandardFileReply reply;
     StandardGetFile(0L, -1, 0L, &reply);
     if (out_spec && reply.sfGood) *(FSSpec*)out_spec = reply.sfFile;
     if (out_good) *out_good = reply.sfGood ? 1 : 0;
 }
 
-static void real_standard_put_file(const char* prompt, const char* defname,
+static void app_standard_put_file(const char* prompt, const char* defname,
                                    void* out_spec, int* out_good) {
     StandardFileReply reply;
     StandardPutFile((ConstStr255Param)prompt, (ConstStr255Param)defname, &reply);
@@ -124,26 +124,26 @@ static void real_standard_put_file(const char* prompt, const char* defname,
     if (out_good) *out_good = reply.sfGood ? 1 : 0;
 }
 
-static short real_gestalt(unsigned long selector, long* out_response) {
+static short app_gestalt(unsigned long selector, long* out_response) {
     return Gestalt((OSType)selector, out_response);
 }
 
-static short real_note_alert(short id, void* filter) {
+static short app_note_alert(short id, void* filter) {
     return NoteAlert(id, (ModalFilterUPP)filter);
 }
 
-static short real_stop_alert(short id, void* filter) {
+static short app_stop_alert(short id, void* filter) {
     return StopAlert(id, (ModalFilterUPP)filter);
 }
 
-static const MacSyscalls g_real_syscalls = {
-    real_tick_count,
-    real_new_handle, real_dispose_handle, real_hlock, real_hunlock,
-    real_set_handle_size, real_mem_error,
-    real_fsp_open_df, real_fs_close, real_fs_read, real_fs_write,
-    real_get_eof, real_set_eof, real_set_fpos, real_fsp_create,
-    real_standard_get_file, real_standard_put_file,
-    real_gestalt, real_note_alert, real_stop_alert
+static const MacSyscalls g_syscalls = {
+    app_tick_count,
+    app_new_handle, app_dispose_handle, app_hlock, app_hunlock,
+    app_set_handle_size, app_mem_error,
+    app_fsp_open_df, app_fs_close, app_fs_read, app_fs_write,
+    app_get_eof, app_set_eof, app_set_fpos, app_fsp_create,
+    app_standard_get_file, app_standard_put_file,
+    app_gestalt, app_note_alert, app_stop_alert
 };
 
 static void toolbox_init(void) {
@@ -186,7 +186,7 @@ static void event_loop(void) {
                 long sel = MenuSelect(ev.where);
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, g_front_window,
-                                                          &g_real_syscalls);
+                                                          &g_syscalls);
                     if (act == kMenuActionQuit)  g_quit_requested = 1;
                     if (act == kMenuActionClose && g_front_window) {
                         win_editor_close(g_front_window);
@@ -231,7 +231,7 @@ static void event_loop(void) {
                 long sel = MenuKey(ch);
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, g_front_window,
-                                                          &g_real_syscalls);
+                                                          &g_syscalls);
                     if (act == kMenuActionQuit)  g_quit_requested = 1;
                     if (act == kMenuActionClose && g_front_window) {
                         win_editor_close(g_front_window);

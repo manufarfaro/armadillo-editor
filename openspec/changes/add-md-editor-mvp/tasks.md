@@ -178,7 +178,7 @@ Each task ends when its module's tests pass. Module order matches the dependency
 
 ## Group 4 — Toolbox-coupled targets (no host tests; on-device verification)
 
-- [ ] 4.1 `src/draw_qd_real.c` — implement each `DrawOps` field using real QuickDraw primitives
+- [ ] 4.1 `src/draw_qd.c` — implement each `DrawOps` field using real QuickDraw primitives
 - [ ] 4.2 `src_pane/src_pane.c` — TE wrapper behind vendor-free API (TEHandle, TEInit, TEActivate, TEIdle, TEKey, TESetStyle, etc.)
 - [ ] 4.3 `src/file_io.c` — Standard File parts (SFGetFile, SFPutFile; wire to real open_df / fs_read / new_file; check-against-fnfErr etc.)
 - [ ] 4.4 `src/menus.c` — MBAR init, menu command dispatch table, keyboard shortcut mapping

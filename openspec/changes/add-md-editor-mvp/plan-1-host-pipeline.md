@@ -8,7 +8,7 @@
 
 **Tech Stack:** C89 host + Retro68 cross-compile later; CMake for the cross build; plain GNU Make for host tests; Unity test framework (vendored); md4c markdown parser (vendored, pinned commit).
 
-**Out of scope for this plan:** `src_pane.c`, `draw_qd_real.c`, `win_editor.c`, `menus.c`, `app.c`, the real `MacSyscalls` wiring, `armadillo.r` resources beyond a minimal stub, and the on-device smoke test. Those live in Plan 2.
+**Out of scope for this plan:** `src_pane.c`, `draw_qd.c`, `win_editor.c`, `menus.c`, `app.c`, the real `MacSyscalls` wiring, `armadillo.r` resources beyond a minimal stub, and the on-device smoke test. Those live in Plan 2.
 
 **Pulled forward from Plan 2 into this plan:** GitHub Actions CI (four workflows) and README badges. Rationale — CI pays off the moment host tests exist, not after the app ships, so it lands at the end of Plan 1 rather than waiting for Plan 2. The cross-build job uses the official `ghcr.io/autc04/retro68` Docker image, so no Retro68 install is required on the CI runner.
 
@@ -62,7 +62,7 @@
 
 ### Not created in this plan (Plan 2)
 - `src_pane/src_pane.c`
-- `src/draw_qd_real.c`, `src/draw_qd_real.h`
+- `src/draw_qd.c`, `src/draw_qd.h`
 - `src/win_editor.c`, `src/menus.c`, `src/app.c`, `src/smoke_test.c`
 - Full `armadillo.r` (ALRTs, STR#, ICN#)
 - Real `MacSyscalls` wiring
@@ -606,7 +606,7 @@ add_application(ArmadilloEditor
     # src/app.c
     # src/menus.c
     # src/win_editor.c
-    # src/draw_qd_real.c
+    # src/draw_qd.c
     # src_pane/src_pane.c
 
     # Third-party
@@ -1164,7 +1164,7 @@ overflow — never grows mid-allocation. See design.md §4.
  *
  * The render/layout pass emits drawing operations through a vtable
  * instead of calling QuickDraw directly. Production wires this to real
- * QuickDraw (src/draw_qd_real.c in Plan 2). Tests wire it to a
+ * QuickDraw (src/draw_qd.c in Plan 2). Tests wire it to a
  * recording sink (test/recorder.c) that captures every call for
  * assertion.
  *
@@ -6119,14 +6119,14 @@ At this point:
 - README badges reflect the four workflows' current status.
 - `tasks.md` Groups 0–3 are fully executed; CI from Plan 2's Group 6 is pulled forward.
 
-Next: Plan 2 (remaining of Groups 4–8) wires the Toolbox-coupled modules (`src_pane`, `draw_qd_real`, `win_editor`, `menus`, `app`), adds the full resource file, writes the on-device smoke test, and ships MVP.
+Next: Plan 2 (remaining of Groups 4–8) wires the Toolbox-coupled modules (`src_pane`, `draw_qd`, `win_editor`, `menus`, `app`), adds the full resource file, writes the on-device smoke test, and ships MVP.
 
 ## Known gaps and deferred items
 
 - **Word wrap in render.** Text that exceeds `content_width - indent` is NOT wrapped in the MVP layout pass. Documents in the 5–10 line wireframe range don't trigger this. A later iteration adds wrap at ASCII spaces.
 - **Inline HTML rendering.** md4c detects HTML as `kBlockHtml` / `kStyleHtmlSpan`; render emits it as raw Monaco 10 purple text. Tier 2 will add a whitelist tokenizer producing styled output.
 - **Standard File dialogs.** `file_io_open_interactive` and `file_io_save_as` are Plan 2 territory; current stubs return `kFileIoErrCancel`.
-- **QuickDraw font metrics defaults.** The recorder returns hard-coded 12/3/16. Real Toolbox metrics will differ per font/size; production code paths pick these up from `GetFontInfo()` in `draw_qd_real.c` (Plan 2).
+- **QuickDraw font metrics defaults.** The recorder returns hard-coded 12/3/16. Real Toolbox metrics will differ per font/size; production code paths pick these up from `GetFontInfo()` in `draw_qd.c` (Plan 2).
 
 ## Self-review notes
 

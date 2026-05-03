@@ -49,7 +49,7 @@ make -f Makefile.hosttests build_hosttests/render_test
 ./build_hosttests/render_test -n test_render_layout_h1...   # Unity's -n selects by name prefix
 ```
 
-Tests live **colocated** as `<module>_test.c`. Host-buildable modules: `render/arena`, `render/render`, `mdparse`, `scanner`, `src/doc`, `src/debounce`, `src/file_io`. NOT host-buildable (require Toolbox): `src_pane/`, `src/win_editor`, `src/menus`, `src/app`, `src/draw_qd_real`. Those are covered by the on-device smoke test `.APPL` (Plan 2).
+Tests live **colocated** as `<module>_test.c`. Host-buildable modules: `render/arena`, `render/render`, `mdparse`, `scanner`, `src/doc`, `src/debounce`, `src/file_io`. NOT host-buildable (require Toolbox): `src_pane/`, `src/win_editor`, `src/menus`, `src/app`, `src/draw_qd`. Those are covered by the on-device smoke test `.APPL` (Plan 2).
 
 ### Cross-compile (Retro68 → Quadra 800 VM)
 

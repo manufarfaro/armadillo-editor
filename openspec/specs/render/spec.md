@@ -4,7 +4,7 @@
 
 Build a flat block model from an `MdParseSink` event stream, lay out that model into line boxes at a given content width, and emit the result as a sequence of QuickDraw-equivalent draw calls through a swappable `DrawOps` vtable. This is the largest capability in the project by code volume; it owns its own arena allocator to manage variable-length data without fighting the Mac OS Memory Manager.
 
-`render` is the implementation of the Read pane. Production code wires `DrawOps` to real QuickDraw (`src/draw_qd_real.c`); tests wire it to a recording sink that captures every call. This gives us pixel-accurate unit tests for the renderer without requiring a running Toolbox.
+`render` is the implementation of the Read pane. Production code wires `DrawOps` to real QuickDraw (`src/draw_qd.c`); tests wire it to a recording sink that captures every call. This gives us pixel-accurate unit tests for the renderer without requiring a running Toolbox.
 
 ## Requirements
 
@@ -118,7 +118,7 @@ typedef struct DrawOps {
 typedef struct DrawContext { const DrawOps* ops; void* ctx; } DrawContext;
 ```
 
-The renderer SHALL NOT call QuickDraw directly. Production `DrawContext` wraps real QuickDraw (`src/draw_qd_real.c`); tests wrap a recording sink.
+The renderer SHALL NOT call QuickDraw directly. Production `DrawContext` wraps real QuickDraw (`src/draw_qd.c`); tests wrap a recording sink.
 
 #### Scenario: Renderer calls only through DrawOps
 - GIVEN a test run with a recording `DrawContext`
