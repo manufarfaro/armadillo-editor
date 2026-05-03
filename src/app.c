@@ -180,7 +180,21 @@ static void event_loop(void) {
             /* Step 15 adds in-content / in-go-away dispatch. */
             break;
         }
-        default: break;         /* Step 11 adds keyDown/⌘ handling */
+        case keyDown:
+        case autoKey: {
+            char ch = ev.message & charCodeMask;
+            if (ev.modifiers & cmdKey) {
+                long sel = MenuKey(ch);
+                if (sel) {
+                    MenuAction act = menus_handle_command(sel, 0,
+                                                          &g_real_syscalls);
+                    if (act == kMenuActionQuit) g_quit_requested = 1;
+                }
+            }
+            /* Non-⌘ keys go to the front window's editor in Step 15. */
+            break;
+        }
+        default: break;
         }
     }
 }
