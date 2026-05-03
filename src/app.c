@@ -149,8 +149,22 @@ static void toolbox_init(void) {
     FlushEvents(everyEvent, 0);
 }
 
+/* Application-wide quit flag. Set when the user picks File→Quit; the
+ * event loop breaks out and main() returns. */
+static int g_quit_requested = 0;
+
+static void event_loop(void) {
+    EventRecord ev;
+    const long sleep_ticks = 60;            /* 1 s — Plan 2b drops to 15 */
+    while (!g_quit_requested) {
+        if (WaitNextEvent(everyEvent, &ev, sleep_ticks, 0L)) {
+            /* Step 10 wires the dispatch table here. */
+        }
+    }
+}
+
 int main(void) {
     toolbox_init();
-    /* Plan 2a Step 9 adds the event loop here. */
+    event_loop();
     return 0;
 }
