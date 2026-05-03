@@ -66,3 +66,4 @@ If every box is checked, proceed to tag `v0.1.0`.
 ## QA passes
 
 <!-- Append `- YYYY-MM-DD — <short-sha> — all items pass on QEMU Quadra 800 / System 7.5.5` per successful run. -->
+- 2026-05-03 — b853e5c — all items pass on QEMU Quadra 800 / System 7.5.5
