@@ -24,6 +24,7 @@
 #include <Dialogs.h>
 #include <Events.h>
 #include "src/mac_syscalls.h"
+#include "src/menus.h"
 #include <MacMemory.h>
 #include <Files.h>
 #include <StandardFile.h>
@@ -70,7 +71,9 @@ static short real_mem_error(void) {
 }
 
 static short real_fsp_open_df(const void* spec, char perm, short* out_ref) {
-    return FSpOpenDF((const FSSpec*)spec, perm, out_ref);
+    /* FSpOpenDF's prototype takes non-const FSSpecPtr; same const-cast
+     * pattern as real_fsp_create. */
+    return FSpOpenDF((FSSpec*)(void*)spec, perm, out_ref);
 }
 
 static short real_fs_close(short ref) {
@@ -99,7 +102,10 @@ static short real_set_fpos(short ref, short mode, long off) {
 
 static short real_fsp_create(const void* spec, unsigned long creator,
                              unsigned long type, short script) {
-    return FSpCreate((const FSSpec*)spec, creator, type, script);
+    /* FSpCreate's prototype takes a non-const FSSpecPtr. The const-cast
+     * away here matches every other Mac codebase — the Toolbox routine
+     * doesn't actually mutate *spec; the API is just const-incorrect. */
+    return FSpCreate((FSSpec*)(void*)spec, creator, type, script);
 }
 
 static void real_standard_get_file(void* out_spec, int* out_good) {
@@ -157,14 +163,31 @@ static void event_loop(void) {
     EventRecord ev;
     const long sleep_ticks = 60;            /* 1 s — Plan 2b drops to 15 */
     while (!g_quit_requested) {
-        if (WaitNextEvent(everyEvent, &ev, sleep_ticks, 0L)) {
-            /* Step 10 wires the dispatch table here. */
+        if (!WaitNextEvent(everyEvent, &ev, sleep_ticks, 0L)) continue;
+
+        switch (ev.what) {
+        case mouseDown: {
+            WindowPtr wp;
+            short part = FindWindow(ev.where, &wp);
+            if (part == inMenuBar) {
+                long sel = MenuSelect(ev.where);
+                if (sel) {
+                    MenuAction act = menus_handle_command(sel, 0,
+                                                          &g_real_syscalls);
+                    if (act == kMenuActionQuit) g_quit_requested = 1;
+                }
+            }
+            /* Step 15 adds in-content / in-go-away dispatch. */
+            break;
+        }
+        default: break;         /* Step 11 adds keyDown/⌘ handling */
         }
     }
 }
 
 int main(void) {
     toolbox_init();
+    menus_install();
     event_loop();
     return 0;
 }
