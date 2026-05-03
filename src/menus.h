@@ -32,6 +32,11 @@ typedef enum {
  * Toolbox init. */
 void menus_install(void);
 
+/* Callback the app installs so menus.c can request a new editor
+ * window without coupling menus to win_editor. */
+typedef WinEditor* (*MenusNewWindowCb)(const MacSyscalls* sys);
+void menus_set_new_window_cb(MenusNewWindowCb cb);
+
 /* Dispatch a packed (menu, item) selector returned from MenuSelect or
  * MenuKey. `win` may be NULL (e.g., About item with no window open).
  * Returns kMenuActionQuit when the user picked File→Quit so the event

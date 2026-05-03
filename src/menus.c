@@ -23,6 +23,12 @@
 #define kFileSaveAs   6
 #define kFileQuit     8
 
+static MenusNewWindowCb g_new_window_cb = 0;
+
+void menus_set_new_window_cb(MenusNewWindowCb cb) {
+    g_new_window_cb = cb;
+}
+
 void menus_install(void) {
     Handle mbar = GetNewMBar(128);
     if (!mbar) return;          /* missing MBAR resource — caller alerts */
@@ -48,8 +54,11 @@ MenuAction menus_handle_command(long menu_select, WinEditor* win,
         break;
     case kMenuFile:
         switch (item) {
-        case kFileQuit:  action = kMenuActionQuit;  break;
+        case kFileNew:
+            if (g_new_window_cb) (void)g_new_window_cb(sys);
+            break;
         case kFileClose: action = kMenuActionClose; break;
+        case kFileQuit:  action = kMenuActionQuit;  break;
         default: break;         /* Open/Save/SaveAs land in Plan 2b */
         }
         break;

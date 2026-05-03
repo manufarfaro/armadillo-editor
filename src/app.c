@@ -25,6 +25,7 @@
 #include <Events.h>
 #include "src/mac_syscalls.h"
 #include "src/menus.h"
+#include "src/win_editor.h"
 #include <MacMemory.h>
 #include <Files.h>
 #include <StandardFile.h>
@@ -159,6 +160,17 @@ static void toolbox_init(void) {
  * event loop breaks out and main() returns. */
 static int g_quit_requested = 0;
 
+/* MVP is single-document — one editor window at a time. */
+static WinEditor* g_front_window = 0;
+
+static WinEditor* app_new_editor(const MacSyscalls* sys) {
+    if (g_front_window) {
+        win_editor_free(g_front_window);
+    }
+    g_front_window = win_editor_new(sys);
+    return g_front_window;
+}
+
 static void event_loop(void) {
     EventRecord ev;
     const long sleep_ticks = 60;            /* 1 s — Plan 2b drops to 15 */
@@ -202,6 +214,7 @@ static void event_loop(void) {
 int main(void) {
     toolbox_init();
     menus_install();
+    menus_set_new_window_cb(app_new_editor);
     event_loop();
     return 0;
 }
