@@ -39,11 +39,11 @@ resource 'MBAR' (128) {
 
 resource 'MENU' (128, "Apple") {
     128, textMenuProc,
-    0x7FFFFFFD,                 /* enable all but item 1 placeholder pre-init */
+    allEnabled,
     enabled,
     apple,
     {
-        "About Armadillo Editor\xC9",
+        "About Armadillo Editor\0xC9",
             noicon, nokey, nomark, plain;
         "-",
             noicon, nokey, nomark, plain;
@@ -57,11 +57,11 @@ resource 'MENU' (129, "File") {
     "File",
     {
         "New",          noicon, "N", nomark, plain;
-        "Open\xC9",     noicon, "O", nomark, plain;
+        "Open\0xC9",     noicon, "O", nomark, plain;
         "-",            noicon, nokey, nomark, plain;
         "Close",        noicon, "W", nomark, plain;
         "Save",         noicon, "S", nomark, plain;
-        "Save As\xC9",  noicon, nokey, nomark, plain;
+        "Save As\0xC9",  noicon, nokey, nomark, plain;
         "-",            noicon, nokey, nomark, plain;
         "Quit",         noicon, "Q", nomark, plain;
     }
@@ -137,7 +137,7 @@ resource 'DITL' (256, "About") {
         {110, 220, 130, 290}, Button       { enabled, "OK" },
         { 16,  16,  36, 296}, StaticText   { disabled, "Armadillo Editor" },
         { 44,  16,  64, 296}, StaticText   { disabled, "A native System 7 markdown editor." },
-        { 72,  16,  92, 296}, StaticText   { disabled, "Version 0.1.0 \xD1 Bare Shell" }
+        { 72,  16,  92, 296}, StaticText   { disabled, "Version 0.1.0 \0xD1 Bare Shell" }
     }
 };
 
@@ -187,5 +187,5 @@ resource 'vers' (1, "Application version") {
     0x00,
     verUS,
     "0.1.0",
-    "0.1.0 \xD1 Bare Shell"
+    "0.1.0 \0xD1 Bare Shell"
 };
