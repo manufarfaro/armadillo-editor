@@ -181,15 +181,47 @@ static void event_loop(void) {
         case mouseDown: {
             WindowPtr wp;
             short part = FindWindow(ev.where, &wp);
-            if (part == inMenuBar) {
+            switch (part) {
+            case inMenuBar: {
                 long sel = MenuSelect(ev.where);
                 if (sel) {
-                    MenuAction act = menus_handle_command(sel, 0,
+                    MenuAction act = menus_handle_command(sel, g_front_window,
                                                           &g_real_syscalls);
-                    if (act == kMenuActionQuit) g_quit_requested = 1;
+                    if (act == kMenuActionQuit)  g_quit_requested = 1;
+                    if (act == kMenuActionClose && g_front_window) {
+                        win_editor_close(g_front_window);
+                        g_front_window = 0;
+                    }
                 }
+                break;
             }
-            /* Step 15 adds in-content / in-go-away dispatch. */
+            case inSysWindow:
+                SystemClick(&ev, wp);   /* desk accessories */
+                break;
+            case inContent:
+                if (g_front_window
+                    && wp == (WindowPtr)win_editor_window_ref(g_front_window)) {
+                    win_editor_handle_event(g_front_window, &ev);
+                }
+                break;
+            case inGoAway:
+                if (g_front_window
+                    && wp == (WindowPtr)win_editor_window_ref(g_front_window)
+                    && TrackGoAway(wp, ev.where)) {
+                    win_editor_close(g_front_window);
+                    g_front_window = 0;
+                }
+                break;
+            case inDrag: {
+                /* LMGetGrayRgn is the multiversal/low-memory accessor for
+                 * the desktop region; classic GetGrayRgn() doesn't exist
+                 * in this Retro68 header set. */
+                Rect bounds = (*LMGetGrayRgn())->rgnBBox;
+                DragWindow(wp, ev.where, &bounds);
+                break;
+            }
+            default: break;
+            }
             break;
         }
         case keyDown:
@@ -198,14 +230,27 @@ static void event_loop(void) {
             if (ev.modifiers & cmdKey) {
                 long sel = MenuKey(ch);
                 if (sel) {
-                    MenuAction act = menus_handle_command(sel, 0,
+                    MenuAction act = menus_handle_command(sel, g_front_window,
                                                           &g_real_syscalls);
-                    if (act == kMenuActionQuit) g_quit_requested = 1;
+                    if (act == kMenuActionQuit)  g_quit_requested = 1;
+                    if (act == kMenuActionClose && g_front_window) {
+                        win_editor_close(g_front_window);
+                        g_front_window = 0;
+                    }
                 }
+            } else if (g_front_window) {
+                win_editor_handle_event(g_front_window, &ev);
             }
-            /* Non-⌘ keys go to the front window's editor in Step 15. */
             break;
         }
+        case updateEvt:
+        case activateEvt:
+            if (g_front_window
+                && (WindowPtr)ev.message
+                       == (WindowPtr)win_editor_window_ref(g_front_window)) {
+                win_editor_handle_event(g_front_window, &ev);
+            }
+            break;
         default: break;
         }
     }

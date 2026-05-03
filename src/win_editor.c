@@ -87,9 +87,12 @@ void win_editor_handle_event(WinEditor* w, const void* event_record) {
         src_pane_on_activate(w->src_pane,
                              (ev->modifiers & activeFlag) != 0);
         break;
-    case mouseDown:
-        /* Step 15 dispatches in-content vs. in-go-away here. */
+    case mouseDown: {
+        Point pt = ev->where;
+        GlobalToLocal(&pt);
+        src_pane_on_mouse_down(w->src_pane, pt.h, pt.v, ev->modifiers);
         break;
+    }
     case keyDown:
     case autoKey: {
         char ch = ev->message & charCodeMask;
