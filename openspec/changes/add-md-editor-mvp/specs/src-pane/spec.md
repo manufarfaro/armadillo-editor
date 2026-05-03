@@ -7,7 +7,7 @@ All requirements in `openspec/specs/src-pane/spec.md` are new additions in this 
 - **Opaque `SrcPane` handle** — declared in `src_pane/src_pane.h`; header is vendor-free (no Toolbox / TE types).
 - **Lifecycle** — `src_pane_new` / `src_pane_free`; `window_ref` passed as `void*` to avoid leaking `WindowPtr`.
 - **Text get/set** — `src_pane_get_text` / `src_pane_set_text`.
-- **Style-run application** — `src_pane_apply_runs` translates project `StyleRun` values to the underlying engine's style-application calls per a fixed mapping (Monaco 10, with color/face varying by `StyleKind`).
+- **Style-run application** — `src_pane_apply_runs` translates project `MdStyleRun` values to the underlying engine's style-application calls per a fixed mapping (Monaco 10, with color/face varying by `StyleKind`).
 - **Selection** — `src_pane_get_selection` / `src_pane_set_selection`; inclusive-start, exclusive-end.
 - **Event delegation** — `src_pane_on_mouse_down` / `src_pane_on_key` / `src_pane_on_activate` / `src_pane_on_update` / `src_pane_on_idle` wrapping the corresponding TE calls.
 - **Edit notification** — `src_pane_set_edit_callback` fires on every buffer mutation.

@@ -8,7 +8,7 @@
 
 **Tech Stack:** C89 host + Retro68 cross-compile later; CMake for the cross build; plain GNU Make for host tests; Unity test framework (vendored); md4c markdown parser (vendored, pinned commit).
 
-**Out of scope for this plan:** `src_pane.c`, `draw_qd_real.c`, `win_editor.c`, `menus.c`, `app.c`, the real `MacSyscalls` wiring, `armadillo.r` resources beyond a minimal stub, and the on-device smoke test. Those live in Plan 2.
+**Out of scope for this plan:** `src_pane.c`, `draw_qd.c`, `win_editor.c`, `menus.c`, `app.c`, the real `MacSyscalls` wiring, `armadillo.r` resources beyond a minimal stub, and the on-device smoke test. Those live in Plan 2.
 
 **Pulled forward from Plan 2 into this plan:** GitHub Actions CI (four workflows) and README badges. Rationale — CI pays off the moment host tests exist, not after the app ships, so it lands at the end of Plan 1 rather than waiting for Plan 2. The cross-build job uses the official `ghcr.io/autc04/retro68` Docker image, so no Retro68 install is required on the CI runner.
 
@@ -62,7 +62,7 @@
 
 ### Not created in this plan (Plan 2)
 - `src_pane/src_pane.c`
-- `src/draw_qd_real.c`, `src/draw_qd_real.h`
+- `src/draw_qd.c`, `src/draw_qd.h`
 - `src/win_editor.c`, `src/menus.c`, `src/app.c`, `src/smoke_test.c`
 - Full `armadillo.r` (ALRTs, STR#, ICN#)
 - Real `MacSyscalls` wiring
@@ -606,7 +606,7 @@ add_application(ArmadilloEditor
     # src/app.c
     # src/menus.c
     # src/win_editor.c
-    # src/draw_qd_real.c
+    # src/draw_qd.c
     # src_pane/src_pane.c
 
     # Third-party
@@ -952,8 +952,8 @@ ParmBlkPtr, etc. at their implementation site.
 /*
  * render/inlines.h — inline style runs inside a block's text.
  *
- * A StyleRun is a slice of a block's text carrying a single visual
- * style. Scanner produces StyleRun arrays for the source pane; render
+ * A MdStyleRun is a slice of a block's text carrying a single visual
+ * style. Scanner produces MdStyleRun arrays for the source pane; render
  * produces them inside each Block for the read pane. The two uses
  * share the type but live in different arenas.
  */
@@ -969,12 +969,12 @@ typedef enum {
     kStyleHtmlSpan = 5     /* inline <tag>; MVP: raw                    */
 } StyleKind;
 
-typedef struct StyleRun {
+typedef struct MdStyleRun {
     unsigned short start;       /* byte offset into containing text       */
     unsigned short length;      /* bytes                                  */
     StyleKind      kind;
     short          link_index;  /* index into per-model link table; -1 = N/A */
-} StyleRun;
+} MdStyleRun;
 
 #endif /* ARMA_INLINES_H */
 ```
@@ -1013,7 +1013,7 @@ typedef struct Block {
     const char*     text;          /* arena-alloc'd; NOT NUL-terminated */
     unsigned short  text_length;
     unsigned short  run_count;
-    const StyleRun* runs;          /* arena-alloc'd; NULL if 0         */
+    const MdStyleRun* runs;          /* arena-alloc'd; NULL if 0         */
 } Block;
 
 #endif /* ARMA_BLOCKS_H */
@@ -1026,7 +1026,7 @@ cat > /tmp/marma_harness.c <<'EOF'
 #include "render/blocks.h"
 #include "render/inlines.h"
 int main(void) {
-    Block b; StyleRun r;
+    Block b; MdStyleRun r;
     (void)b; (void)r;
     return 0;
 }
@@ -1052,7 +1052,7 @@ Add render/blocks.h and render/inlines.h — flat block model types
 BlockKind covers the MVP's block types (paragraph, heading, list item,
 blockquote, code block, hr, raw HTML). Nesting via list_depth and
 quote_depth scalars, not a tree. Block.text references arena memory;
-Block.runs references an arena-allocated StyleRun array.
+Block.runs references an arena-allocated MdStyleRun array.
 
 StyleKind covers the inline-run types scanner and render share
 (plain / emph / strong / code span / link / HTML span).
@@ -1071,7 +1071,7 @@ StyleKind covers the inline-run types scanner and render share
 /*
  * render/arena.h — Handle-backed bump allocator for the render pipeline.
  *
- * All variable-length data in the render pipeline (Blocks, StyleRun
+ * All variable-length data in the render pipeline (Blocks, MdStyleRun
  * arrays, text slices, link URL strings) lives in one arena. The arena
  * is backed by a single Mac OS Handle that we HLock for the arena's
  * entire lifetime. Growth is "grow-before-parse": callers must
@@ -1164,7 +1164,7 @@ overflow — never grows mid-allocation. See design.md §4.
  *
  * The render/layout pass emits drawing operations through a vtable
  * instead of calling QuickDraw directly. Production wires this to real
- * QuickDraw (src/draw_qd_real.c in Plan 2). Tests wire it to a
+ * QuickDraw (src/draw_qd.c in Plan 2). Tests wire it to a
  * recording sink (test/recorder.c) that captures every call for
  * assertion.
  *
@@ -1415,7 +1415,7 @@ list_ordered to on_block_open.
  * scanner/scanner.h — style-run producer for the source pane.
  *
  * Scanner consumes MdParseSink events and accumulates a flat
- * StyleRun[] for application to the source pane via src_pane_apply_
+ * MdStyleRun[] for application to the source pane via src_pane_apply_
  * runs. Arena-backed; no direct allocation.
  */
 #ifndef ARMA_SCANNER_H
@@ -1440,7 +1440,7 @@ const MdParseSink* scanner_sink(Scanner* s);
 
 /* After mdparse_run returns, retrieve the accumulated runs. Pointer
  * valid until the next scanner_reset or arena_reset. */
-const StyleRun* scanner_runs(const Scanner* s, size_t* out_count);
+const MdStyleRun* scanner_runs(const Scanner* s, size_t* out_count);
 
 /* Clear accumulated runs so the scanner is ready for the next parse
  * cycle. Does NOT free arena memory — arena_reset is the caller's job. */
@@ -1468,7 +1468,7 @@ Then `git-commit` with message:
 Add scanner/scanner.h — style-run producer API
 
 Opaque Scanner with new/free, an MdParseSink accessor, a runs
-accessor, and a reset. Arena-backed — all StyleRun storage comes
+accessor, and a reset. Arena-backed — all MdStyleRun storage comes
 from the Arena* passed to scanner_new. No direct allocation.
 ```
 
@@ -1525,7 +1525,7 @@ const char* src_pane_get_text(const SrcPane* p, unsigned short* out_len);
 void        src_pane_set_text(SrcPane* p, const char* bytes,
                               unsigned short len);
 
-void src_pane_apply_runs(SrcPane* p, const StyleRun* runs, size_t count);
+void src_pane_apply_runs(SrcPane* p, const MdStyleRun* runs, size_t count);
 
 void src_pane_get_selection(const SrcPane* p,
                             unsigned short* out_start,
@@ -2513,7 +2513,7 @@ Implement arena_alloc — 4-byte aligned bump allocator
 Rounds requested size up to 4 bytes, checks against capacity, returns
 NULL without side effects on overflow. 68020+ traps on longword
 access to odd addresses; the alignment here is the reason all Block
-and StyleRun structs in the arena are safely long-addressable.
+and MdStyleRun structs in the arena are safely long-addressable.
 ```
 
 ---
@@ -4048,7 +4048,7 @@ Mdparse is now complete. Onto scanner.
 
 ## Phase 7 — Scanner
 
-Scanner consumes MdParseSink events and produces a StyleRun array in the arena. It's small — ~100 lines of impl, ~200 lines of tests.
+Scanner consumes MdParseSink events and produces a MdStyleRun array in the arena. It's small — ~100 lines of impl, ~200 lines of tests.
 
 ### Task 38: Scanner test harness + empty state (red → green → commit)
 
@@ -4062,7 +4062,7 @@ Scanner consumes MdParseSink events and produces a StyleRun array in the arena. 
  * scanner/scanner_test.c — host unit tests for scanner.
  *
  * Feeds synthetic MdParseSink events (not real md4c output) into the
- * scanner's sink and asserts on the accumulated StyleRun[].
+ * scanner's sink and asserts on the accumulated MdStyleRun[].
  */
 #include "unity.h"
 #include "fake_syscalls.h"
@@ -4083,7 +4083,7 @@ void test_scanner_empty_event_stream_produces_zero_runs(void) {
     TEST_ASSERT_NOT_NULL(s);
 
     size_t count = 99;
-    const StyleRun* runs = scanner_runs(s, &count);
+    const MdStyleRun* runs = scanner_runs(s, &count);
     (void)runs;
     TEST_ASSERT_EQUAL_INT(0, count);
 
@@ -4122,7 +4122,7 @@ $(BUILDDIR)/scanner_test: scanner/scanner.c scanner/scanner_test.c \
 /*
  * scanner/scanner.c — style-run producer for the source pane.
  *
- * Sink callbacks record a StyleRun per inline span event. HTML block
+ * Sink callbacks record a MdStyleRun per inline span event. HTML block
  * ranges are tracked via text-event source offsets (on_block_open
  * carries no offset; we capture the first text event's offset inside
  * HTML-block mode and accumulate end from subsequent text events).
@@ -4132,7 +4132,7 @@ $(BUILDDIR)/scanner_test: scanner/scanner.c scanner/scanner_test.c \
 
 struct Scanner {
     Arena*          arena;
-    StyleRun*       runs;        /* arena-allocated, grown in chunks */
+    MdStyleRun*       runs;        /* arena-allocated, grown in chunks */
     size_t          run_count;
     size_t          run_capacity;
 
@@ -4146,19 +4146,19 @@ static int scanner_grow(Scanner* s, size_t needed) {
     if (needed <= s->run_capacity) return 0;
     size_t next = s->run_capacity ? s->run_capacity : 16;
     while (next < needed) next *= 2;
-    size_t bytes = next * sizeof(StyleRun);
+    size_t bytes = next * sizeof(MdStyleRun);
     if (arena_ensure(s->arena, bytes) != 0) return -1;
-    StyleRun* newbuf = (StyleRun*)arena_alloc(s->arena, bytes);
+    MdStyleRun* newbuf = (MdStyleRun*)arena_alloc(s->arena, bytes);
     if (!newbuf) return -1;
     if (s->runs && s->run_count > 0) {
-        memcpy(newbuf, s->runs, s->run_count * sizeof(StyleRun));
+        memcpy(newbuf, s->runs, s->run_count * sizeof(MdStyleRun));
     }
     s->runs = newbuf;
     s->run_capacity = next;
     return 0;
 }
 
-static int scanner_push(Scanner* s, StyleRun r) {
+static int scanner_push(Scanner* s, MdStyleRun r) {
     if (scanner_grow(s, s->run_count + 1) != 0) return -1;
     s->runs[s->run_count++] = r;
     return 0;
@@ -4181,7 +4181,7 @@ static int sc_block_close(void* ctx, BlockKind k) {
     Scanner* s = (Scanner*)ctx;
     if (k == kBlockHtml && s->in_html_block) {
         if (s->html_seen_any_text) {
-            StyleRun r;
+            MdStyleRun r;
             r.start = s->html_block_start;
             r.length = (unsigned short)(s->html_block_end - s->html_block_start);
             r.kind = kStyleHtmlSpan;
@@ -4198,7 +4198,7 @@ static int sc_span(void* ctx, StyleKind k, unsigned short start,
                    unsigned short url_len) {
     (void)url; (void)url_len;
     Scanner* s = (Scanner*)ctx;
-    StyleRun r;
+    MdStyleRun r;
     r.start = start;
     r.length = length;
     r.kind = k;
@@ -4254,7 +4254,7 @@ const MdParseSink* scanner_sink(Scanner* s) {
     return sink;
 }
 
-const StyleRun* scanner_runs(const Scanner* s, size_t* out_count) {
+const MdStyleRun* scanner_runs(const Scanner* s, size_t* out_count) {
     if (out_count) *out_count = s ? s->run_count : 0;
     return s ? s->runs : 0;
 }
@@ -4279,9 +4279,9 @@ git add scanner/scanner.c scanner/scanner_test.c Makefile.hosttests
 Then `git-commit` with message:
 
 ```
-Implement scanner — StyleRun producer + harness with empty-state test
+Implement scanner — MdStyleRun producer + harness with empty-state test
 
-Scanner records inline span events as StyleRun tuples in the arena.
+Scanner records inline span events as MdStyleRun tuples in the arena.
 HTML-block mode tracks the min source_offset of enclosed text events
 as html_block_start and max end as html_block_end, emitting a single
 kStyleHtmlSpan run on block close. Runs grown in doubling chunks via
@@ -4309,7 +4309,7 @@ void test_scanner_records_one_run_per_span(void) {
     sink->on_block_close(sink->ctx, kBlockParagraph);
 
     size_t count = 0;
-    const StyleRun* runs = scanner_runs(s, &count);
+    const MdStyleRun* runs = scanner_runs(s, &count);
     TEST_ASSERT_EQUAL_INT(1, count);
     TEST_ASSERT_EQUAL_INT(4, runs[0].start);
     TEST_ASSERT_EQUAL_INT(6, runs[0].length);
@@ -4328,7 +4328,7 @@ void test_scanner_link_run_has_link_index_minus_one(void) {
     sink->on_span(sink->ctx, kStyleLink, 0, 5, "http://x", 8);
 
     size_t count = 0;
-    const StyleRun* runs = scanner_runs(s, &count);
+    const MdStyleRun* runs = scanner_runs(s, &count);
     TEST_ASSERT_EQUAL_INT(1, count);
     TEST_ASSERT_EQUAL_INT(kStyleLink, runs[0].kind);
     TEST_ASSERT_EQUAL_INT(-1, runs[0].link_index);
@@ -4349,7 +4349,7 @@ void test_scanner_html_block_emits_one_run_covering_all_text_events(void) {
     sink->on_block_close(sink->ctx, kBlockHtml);
 
     size_t count = 0;
-    const StyleRun* runs = scanner_runs(s, &count);
+    const MdStyleRun* runs = scanner_runs(s, &count);
     TEST_ASSERT_EQUAL_INT(1, count);
     TEST_ASSERT_EQUAL_INT(10, runs[0].start);
     TEST_ASSERT_EQUAL_INT(27, runs[0].length);  /* 29 + 8 - 10 */
@@ -4709,7 +4709,7 @@ struct RenderModel {
     size_t     cur_text_len;
     size_t     cur_text_capacity;
 
-    StyleRun*  cur_runs;
+    MdStyleRun*  cur_runs;
     size_t     cur_run_count;
     size_t     cur_run_capacity;
 
@@ -4780,16 +4780,16 @@ static int rm_span(void* ctx, StyleKind k, unsigned short start,
     if (!m->cur_active) return 0;
     if (m->cur_run_count >= m->cur_run_capacity) {
         size_t next = m->cur_run_capacity ? m->cur_run_capacity * 2 : 4;
-        size_t bytes = next * sizeof(StyleRun);
+        size_t bytes = next * sizeof(MdStyleRun);
         if (arena_ensure(m->arena, bytes) != 0) return -1;
-        StyleRun* nb = (StyleRun*)arena_alloc(m->arena, bytes);
+        MdStyleRun* nb = (MdStyleRun*)arena_alloc(m->arena, bytes);
         if (!nb) return -1;
         if (m->cur_runs && m->cur_run_count > 0)
-            memcpy(nb, m->cur_runs, m->cur_run_count * sizeof(StyleRun));
+            memcpy(nb, m->cur_runs, m->cur_run_count * sizeof(MdStyleRun));
         m->cur_runs = nb;
         m->cur_run_capacity = next;
     }
-    StyleRun r; r.start = start; r.length = length; r.kind = k; r.link_index = -1;
+    MdStyleRun r; r.start = start; r.length = length; r.kind = k; r.link_index = -1;
     m->cur_runs[m->cur_run_count++] = r;
     return 0;
 }
@@ -6119,14 +6119,14 @@ At this point:
 - README badges reflect the four workflows' current status.
 - `tasks.md` Groups 0–3 are fully executed; CI from Plan 2's Group 6 is pulled forward.
 
-Next: Plan 2 (remaining of Groups 4–8) wires the Toolbox-coupled modules (`src_pane`, `draw_qd_real`, `win_editor`, `menus`, `app`), adds the full resource file, writes the on-device smoke test, and ships MVP.
+Next: Plan 2 (remaining of Groups 4–8) wires the Toolbox-coupled modules (`src_pane`, `draw_qd`, `win_editor`, `menus`, `app`), adds the full resource file, writes the on-device smoke test, and ships MVP.
 
 ## Known gaps and deferred items
 
 - **Word wrap in render.** Text that exceeds `content_width - indent` is NOT wrapped in the MVP layout pass. Documents in the 5–10 line wireframe range don't trigger this. A later iteration adds wrap at ASCII spaces.
 - **Inline HTML rendering.** md4c detects HTML as `kBlockHtml` / `kStyleHtmlSpan`; render emits it as raw Monaco 10 purple text. Tier 2 will add a whitelist tokenizer producing styled output.
 - **Standard File dialogs.** `file_io_open_interactive` and `file_io_save_as` are Plan 2 territory; current stubs return `kFileIoErrCancel`.
-- **QuickDraw font metrics defaults.** The recorder returns hard-coded 12/3/16. Real Toolbox metrics will differ per font/size; production code paths pick these up from `GetFontInfo()` in `draw_qd_real.c` (Plan 2).
+- **QuickDraw font metrics defaults.** The recorder returns hard-coded 12/3/16. Real Toolbox metrics will differ per font/size; production code paths pick these up from `GetFontInfo()` in `draw_qd.c` (Plan 2).
 
 ## Self-review notes
 

@@ -2,7 +2,7 @@
  * scanner/scanner.h — style-run producer for the source pane.
  *
  * Scanner consumes MdParseSink events and accumulates a flat
- * StyleRun[] for application to the source pane via src_pane_apply_
+ * MdStyleRun[] for application to the source pane via src_pane_apply_
  * runs. Arena-backed; no direct allocation.
  */
 #ifndef ARMA_SCANNER_H
@@ -27,7 +27,7 @@ const MdParseSink* scanner_sink(Scanner* s);
 
 /* After mdparse_run returns, retrieve the accumulated runs. Pointer
  * valid until the next scanner_reset or arena_reset. */
-const StyleRun* scanner_runs(const Scanner* s, size_t* out_count);
+const MdStyleRun* scanner_runs(const Scanner* s, size_t* out_count);
 
 /* Clear accumulated runs so the scanner is ready for the next parse
  * cycle. Does NOT free arena memory — arena_reset is the caller's job. */

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Produce a flat array of `StyleRun` tuples from an `MdParseSink` event stream, for application to the source pane's text as syntax coloring. The scanner is the simpler of the two downstream consumers of `mdparse` (the other being `render`). It does not build a model of the document — it only records which ranges of the source text should be drawn in which style, so `src_pane_apply_runs` can translate them into `TESetStyle` calls.
+Produce a flat array of `MdStyleRun` tuples from an `MdParseSink` event stream, for application to the source pane's text as syntax coloring. The scanner is the simpler of the two downstream consumers of `mdparse` (the other being `render`). It does not build a model of the document — it only records which ranges of the source text should be drawn in which style, so `src_pane_apply_runs` can translate them into `TESetStyle` calls.
 
 This capability gives us the wireframe's colored markdown source (headings bold, `**bold**` in teal, `_italic_` in salmon, `[links](url)` sky-blue underlined, HTML in purple, inline `` `code` `` in darker teal) without requiring the source pane to know anything about markdown.
 
@@ -10,7 +10,7 @@ This capability gives us the wireframe's colored markdown source (headings bold,
 
 ### Requirement: Opaque handle
 
-The `Scanner` type SHALL be declared as an opaque struct in `scanner/scanner.h`. The public header SHALL include only `<stddef.h>`, `render/inlines.h` (for `StyleRun`), `mdparse/mdparse.h` (for `MdParseSink`), and `render/arena.h` (for `Arena`).
+The `Scanner` type SHALL be declared as an opaque struct in `scanner/scanner.h`. The public header SHALL include only `<stddef.h>`, `render/inlines.h` (for `MdStyleRun`), `mdparse/mdparse.h` (for `MdParseSink`), and `render/arena.h` (for `Arena`).
 
 #### Scenario: Opaque handle
 - GIVEN `scanner/scanner.h`
@@ -19,7 +19,7 @@ The `Scanner` type SHALL be declared as an opaque struct in `scanner/scanner.h`.
 
 ### Requirement: Arena-backed allocation
 
-The scanner SHALL allocate all `StyleRun` storage out of an `Arena*` provided at construction time. The scanner SHALL NOT call `malloc`, `NewHandle`, `NewPtr`, or any other allocator directly.
+The scanner SHALL allocate all `MdStyleRun` storage out of an `Arena*` provided at construction time. The scanner SHALL NOT call `malloc`, `NewHandle`, `NewPtr`, or any other allocator directly.
 
 ```c
 Scanner* scanner_new(Arena*);
@@ -30,7 +30,7 @@ void     scanner_free(Scanner*);
 
 #### Scenario: No direct allocation
 - GIVEN the scanner receives 100 span events
-- WHEN the resulting `StyleRun` array is inspected
+- WHEN the resulting `MdStyleRun` array is inspected
 - THEN every run's pointer lies within the arena's address range (not on the system heap)
 
 ### Requirement: Sink interface
@@ -45,7 +45,7 @@ The returned pointer is valid for the lifetime of the `Scanner`. Its callbacks:
 
 - `on_block_open`: if `kBlockHeading`, records a style-run covering the heading line's text in a heading-specific style (optional — MAY be implemented as per-heading-level styling); otherwise no-op.
 - `on_block_close`: no-op for most kinds; for `kBlockHtml`, closes an active HTML-block style-run.
-- `on_span`: records a `StyleRun` for the span's range (start, length, kind). For `kStyleLink`, the `link_url` is ignored (the source pane doesn't render URLs differently from the link text).
+- `on_span`: records a `MdStyleRun` for the span's range (start, length, kind). For `kStyleLink`, the `link_url` is ignored (the source pane doesn't render URLs differently from the link text).
 - `on_text`: typically no-op; the scanner cares about style spans, not text content.
 
 #### Scenario: Scanner records a bold span
@@ -58,7 +58,7 @@ The returned pointer is valid for the lifetime of the `Scanner`. Its callbacks:
 After an `mdparse_run` call that used the scanner's sink, the caller SHALL retrieve the recorded runs:
 
 ```c
-const StyleRun* scanner_runs(const Scanner*, size_t* out_count);
+const MdStyleRun* scanner_runs(const Scanner*, size_t* out_count);
 ```
 
 The returned pointer is valid until the next `scanner_reset` or arena reset. Runs are in the order recorded (which equals input-source order for non-nested spans).
@@ -99,24 +99,24 @@ When a span nests inside another (e.g., `**bold _italic_ text**`), the scanner S
 
 For `on_span(kStyleHtmlSpan, ...)` events, the scanner SHALL record a run with `kind=kStyleHtmlSpan`. This styles the raw HTML text in the source pane (purple in the default theme). The scanner SHALL NOT attempt to parse the HTML — it merely classifies the range.
 
-For `on_block_open(kBlockHtml)`, the scanner SHALL enter "HTML-block mode": on the *next* `on_text` event received while in this mode, record the event's `source_offset` as `html_block_start`. On every subsequent `on_text` while in HTML-block mode, update `html_block_end = source_offset + length`. On `on_block_close(kBlockHtml)`, emit one `StyleRun` with `start = html_block_start`, `length = html_block_end - html_block_start`, `kind = kStyleHtmlSpan`, and exit HTML-block mode. If no `on_text` events fire between open and close (empty HTML block), no run is emitted.
+For `on_block_open(kBlockHtml)`, the scanner SHALL enter "HTML-block mode": on the *next* `on_text` event received while in this mode, record the event's `source_offset` as `html_block_start`. On every subsequent `on_text` while in HTML-block mode, update `html_block_end = source_offset + length`. On `on_block_close(kBlockHtml)`, emit one `MdStyleRun` with `start = html_block_start`, `length = html_block_end - html_block_start`, `kind = kStyleHtmlSpan`, and exit HTML-block mode. If no `on_text` events fire between open and close (empty HTML block), no run is emitted.
 
 The scanner SHALL track HTML-block mode with a single flag plus two offset fields. `BlockAttrs` does not carry source offsets (md4c's API does not supply block-start offsets directly), so the text-event-based tracking is the accurate mechanism.
 
 #### Scenario: HTML block styles the whole block
 - GIVEN source containing `<aside>\n  <p>x</p>\n</aside>` where md4c emits `on_block_open(kBlockHtml)`, then `on_text("<aside>\n  <p>x</p>\n</aside>", 25, source_offset=12)`, then `on_block_close(kBlockHtml)`
 - WHEN the scanner processes this sequence
-- THEN exactly one `StyleRun` is recorded with `start=12, length=25, kind=kStyleHtmlSpan`
+- THEN exactly one `MdStyleRun` is recorded with `start=12, length=25, kind=kStyleHtmlSpan`
 
 #### Scenario: Multi-line HTML block spans all text events
 - GIVEN an HTML block split across multiple `on_text` events: `on_text("<aside>", 7, 10)`, `on_text("  <p>x</p>", 10, 18)`, `on_text("</aside>", 8, 29)`
 - WHEN the scanner processes open → these three text events → close
-- THEN exactly one `StyleRun` is recorded with `start=10, length=27` (from offset 10 through offset 29+8=37)
+- THEN exactly one `MdStyleRun` is recorded with `start=10, length=27` (from offset 10 through offset 29+8=37)
 
 #### Scenario: Empty HTML block emits no run
 - GIVEN `on_block_open(kBlockHtml)` immediately followed by `on_block_close(kBlockHtml)` with no text events
 - WHEN the scanner processes this sequence
-- THEN no `StyleRun` is recorded for the block
+- THEN no `MdStyleRun` is recorded for the block
 
 ### Requirement: Link index
 

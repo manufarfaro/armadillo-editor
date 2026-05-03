@@ -1,7 +1,7 @@
 /*
  * render/arena.h — Handle-backed bump allocator for the render pipeline.
  *
- * All variable-length data in the render pipeline (Blocks, StyleRun
+ * All variable-length data in the render pipeline (Blocks, MdStyleRun
  * arrays, text slices, link URL strings) lives in one arena. The arena
  * is backed by a single Mac OS Handle that we HLock for the arena's
  * entire lifetime. Growth is "grow-before-parse": callers must

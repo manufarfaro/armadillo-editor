@@ -114,7 +114,7 @@ On quit, the application SHALL:
 
 ### Requirement: `MacSyscalls` production wiring
 
-The app shell SHALL define the production `MacSyscalls` struct populated with function pointers that call the real Toolbox. These wrappers MAY be trivial forwarders (`static short real_new_handle(Size s) { return NewHandle(s); }`) or MAY include minor adaptation (e.g., casting, A5 context setup). Every other module that touches the OS SHALL accept a `const MacSyscalls*` parameter, never calling the Toolbox directly.
+The app shell SHALL define the production `MacSyscalls` struct populated with function pointers that call the real Toolbox. These wrappers MAY be trivial forwarders (`static short app_new_handle(Size s) { return NewHandle(s); }`) or MAY include minor adaptation (e.g., casting, A5 context setup). Every other module that touches the OS SHALL accept a `const MacSyscalls*` parameter, never calling the Toolbox directly.
 
 #### Scenario: Real syscalls forward to Toolbox
 - GIVEN the production `MacSyscalls` struct is constructed

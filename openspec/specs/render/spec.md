@@ -4,7 +4,7 @@
 
 Build a flat block model from an `MdParseSink` event stream, lay out that model into line boxes at a given content width, and emit the result as a sequence of QuickDraw-equivalent draw calls through a swappable `DrawOps` vtable. This is the largest capability in the project by code volume; it owns its own arena allocator to manage variable-length data without fighting the Mac OS Memory Manager.
 
-`render` is the implementation of the Read pane. Production code wires `DrawOps` to real QuickDraw (`src/draw_qd_real.c`); tests wire it to a recording sink that captures every call. This gives us pixel-accurate unit tests for the renderer without requiring a running Toolbox.
+`render` is the implementation of the Read pane. Production code wires `DrawOps` to real QuickDraw (`src/draw_qd.c`); tests wire it to a recording sink that captures every call. This gives us pixel-accurate unit tests for the renderer without requiring a running Toolbox.
 
 ## Requirements
 
@@ -80,7 +80,7 @@ const Block*         render_model_block_at(const RenderModel*, size_t);
 
 ### Requirement: Style runs per block
 
-Each `Block` carries an array of `StyleRun` tuples describing inline styling within the block's text. The runs are arena-allocated; each run's `start` and `length` are relative to `Block.text`, not to the original source buffer.
+Each `Block` carries an array of `MdStyleRun` tuples describing inline styling within the block's text. The runs are arena-allocated; each run's `start` and `length` are relative to `Block.text`, not to the original source buffer.
 
 #### Scenario: Paragraph with one bold span
 - GIVEN source `Hello **world** end` producing one paragraph block
@@ -97,7 +97,7 @@ The eventual model SHALL maintain a separate arena-allocated link table mapping 
 #### Scenario: Link run resolves to URL (deferred)
 - GIVEN a paragraph with one `[text](http://ex.com)` link
 - WHEN the model is built
-- THEN the paragraph's single `StyleRun` has `link_index == 0`
+- THEN the paragraph's single `MdStyleRun` has `link_index == 0`
 - AND the link table entry at index 0 contains "http://ex.com" with length 13
 
 ### Requirement: `DrawOps` vtable
@@ -118,7 +118,7 @@ typedef struct DrawOps {
 typedef struct DrawContext { const DrawOps* ops; void* ctx; } DrawContext;
 ```
 
-The renderer SHALL NOT call QuickDraw directly. Production `DrawContext` wraps real QuickDraw (`src/draw_qd_real.c`); tests wrap a recording sink.
+The renderer SHALL NOT call QuickDraw directly. Production `DrawContext` wraps real QuickDraw (`src/draw_qd.c`); tests wrap a recording sink.
 
 #### Scenario: Renderer calls only through DrawOps
 - GIVEN a test run with a recording `DrawContext`
@@ -156,7 +156,7 @@ Per-block horizontal offset = `indent_list * list_depth + indent_quote * quote_d
 
 ### Requirement: Inline style run application
 
-During block drawing, the renderer SHALL apply each `StyleRun` by emitting `set_font` / `set_fg` calls before the run's text and restoring the block's default style after. Inline run styles are the same mapping the source pane uses (see `src-pane` spec), with the exception that `kStyleLink` draws in the link color and underlined face.
+During block drawing, the renderer SHALL apply each `MdStyleRun` by emitting `set_font` / `set_fg` calls before the run's text and restoring the block's default style after. Inline run styles are the same mapping the source pane uses (see `src-pane` spec), with the exception that `kStyleLink` draws in the link color and underlined face.
 
 #### Scenario: Bold run in a paragraph
 - GIVEN a kBlockParagraph with text "plain bold rest" and run `{start=6, length=4, kind=kStyleStrong}`
