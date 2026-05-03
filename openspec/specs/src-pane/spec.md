@@ -15,7 +15,7 @@ The `SrcPane` type SHALL be declared as an opaque struct in `src_pane/src_pane.h
 #### Scenario: Public header is vendor-free
 - GIVEN `src_pane/src_pane.h`
 - WHEN inspected for `#include` directives
-- THEN it includes only `<stddef.h>` and project-owned headers (`render/inlines.h` for `StyleRun`; `src/mac_syscalls.h` for `MacSyscalls`)
+- THEN it includes only `<stddef.h>` and project-owned headers (`render/inlines.h` for `MdStyleRun`; `src/mac_syscalls.h` for `MacSyscalls`)
 
 #### Scenario: Caller cannot reach into the struct
 - GIVEN a caller includes only `src_pane/src_pane.h`
@@ -69,10 +69,10 @@ void        src_pane_set_text(SrcPane*, const char* bytes, unsigned short len);
 The module SHALL accept style-run arrays from the `scanner` module and apply them to the current text buffer:
 
 ```c
-void src_pane_apply_runs(SrcPane*, const StyleRun* runs, size_t count);
+void src_pane_apply_runs(SrcPane*, const MdStyleRun* runs, size_t count);
 ```
 
-Each `StyleRun` SHALL be translated to the underlying text engine's style-application call (for TE: `TESetStyle`). The translation maps `StyleKind` values to font, face, and color per the project's style table:
+Each `MdStyleRun` SHALL be translated to the underlying text engine's style-application call (for TE: `TESetStyle`). The translation maps `StyleKind` values to font, face, and color per the project's style table:
 
 | StyleKind        | Font     | Size | Face         | Color    |
 |------------------|----------|------|--------------|----------|

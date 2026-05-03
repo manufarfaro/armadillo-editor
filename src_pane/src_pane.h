@@ -38,7 +38,7 @@ const char* src_pane_get_text(const SrcPane* p, unsigned short* out_len);
 void        src_pane_set_text(SrcPane* p, const char* bytes,
                               unsigned short len);
 
-void src_pane_apply_runs(SrcPane* p, const StyleRun* runs, size_t count);
+void src_pane_apply_runs(SrcPane* p, const MdStyleRun* runs, size_t count);
 
 void src_pane_get_selection(const SrcPane* p,
                             unsigned short* out_start,

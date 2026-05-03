@@ -36,7 +36,7 @@ typedef struct {
     const char*     text;         /* pointer into arena; NOT NUL-terminated */
     unsigned short  text_length;  /* bytes                                  */
     unsigned short  run_count;
-    const StyleRun* runs;         /* arena-allocated; NULL if run_count=0  */
+    const MdStyleRun* runs;         /* arena-allocated; NULL if run_count=0  */
 } Block;
 ```
 
@@ -57,7 +57,7 @@ typedef struct {
     unsigned short length;    /* bytes                                  */
     StyleKind      kind;
     short          link_index; /* index into per-model link table; -1 if N/A */
-} StyleRun;
+} MdStyleRun;
 ```
 
 ### 1.2 The flat-block model (no tree)
@@ -108,7 +108,7 @@ blocks[1] = { kind=kBlockParagraph, list_depth=1, quote_depth=1, text="second pa
 Four invariants this shape commits us to; violating any breaks the architecture.
 
 1. **No tree — flat list only.** Nesting expressed via `list_depth` / `quote_depth` scalars.
-2. **All variable-length data lives in one arena.** `Block.text`, `StyleRun` arrays, link-URL strings — all out of a single `Handle`-backed arena owned by `RenderModel`. No per-object `malloc`, no per-object `NewHandle`.
+2. **All variable-length data lives in one arena.** `Block.text`, `MdStyleRun` arrays, link-URL strings — all out of a single `Handle`-backed arena owned by `RenderModel`. No per-object `malloc`, no per-object `NewHandle`.
 3. **Text is not NUL-terminated.** Every string carries its length. Matches how md4c hands us text, and lets us reference slices of the source buffer directly without copying for un-escaped ranges.
 4. **`unsigned short` offsets, not `size_t`.** Capped at 64 KB per field. TE's 32,767-byte ceiling bounds the source, so per-block text stays well below 32 KB. Saves ~4 bytes per block × thousands of blocks.
 
@@ -169,7 +169,7 @@ Acyclic, layered. No module calls a module that depends on it.
 - **`src/draw_qd_real`** — production `DrawOps` vtable: translates vtable calls into real QuickDraw.
 - **`src_pane/`** — opaque editable-text-pane API; MVP internally TE-backed; future replacement is a custom piece-table engine.
 - **`mdparse/`** — wraps md4c's `md_parse` behind a `MdParseSink` fan-out interface; hides md4c from the rest of the codebase.
-- **`scanner/`** — `MdParseSink` implementation: accumulates `StyleRun` tuples for source-pane syntax coloring.
+- **`scanner/`** — `MdParseSink` implementation: accumulates `MdStyleRun` tuples for source-pane syntax coloring.
 - **`render/`** — two things: (a) `MdParseSink` implementation that builds a `RenderModel` in an arena; (b) layout pass that emits through the `DrawOps` vtable.
 
 ### 2.3 Three test seams
@@ -204,7 +204,7 @@ SrcPane*     src_pane_new(const SrcPaneParams*, const MacSyscalls*);
 void         src_pane_free(SrcPane*);
 void         src_pane_set_text(SrcPane*, const char* bytes, unsigned short len);
 const char*  src_pane_get_text(const SrcPane*, unsigned short* out_len);
-void         src_pane_apply_runs(SrcPane*, const StyleRun* runs, size_t count);
+void         src_pane_apply_runs(SrcPane*, const MdStyleRun* runs, size_t count);
 void         src_pane_get_selection(const SrcPane*, unsigned short* out_start, unsigned short* out_end);
 void         src_pane_handle_key(SrcPane*, short char_code, short key_code);
 /* activate/deactivate, update, click, idle (cursor blink) */
@@ -223,7 +223,7 @@ int mdparse_run(const char* source, unsigned short source_len,
 typedef struct Scanner Scanner;
 Scanner*             scanner_new(Arena*);
 const MdParseSink*   scanner_sink(Scanner*);
-const StyleRun*      scanner_runs(const Scanner*, size_t* out_count);
+const MdStyleRun*      scanner_runs(const Scanner*, size_t* out_count);
 void                 scanner_reset(Scanner*);
 ```
 
@@ -612,7 +612,7 @@ void test_file_io_open_missing_file_returns_kFileIoErrOpen(void) {
 | `render/arena`  | Yes            | init/alloc/reset/grow/destroy; alignment; OOM paths; FakeSyscalls Handle fake        |
 | `render/render` | Yes            | synthetic sink events → RenderModel; layout pass → recorded `DrawOps` calls          |
 | `mdparse`       | Yes            | md4c fixtures → sink event sequence; error remapping; sink abort propagation         |
-| `scanner`       | Yes            | synthetic sink events → `StyleRun` arrays; range math; overlap handling              |
+| `scanner`       | Yes            | synthetic sink events → `MdStyleRun` arrays; range math; overlap handling              |
 | `doc`           | Yes            | setters, getters, dirty flag                                                          |
 | `src/debounce`  | Yes            | state machine with FakeClock                                                          |
 | `src/file_io`   | Partial        | non-Standard-File parts yes; Standard File dialog itself no                          |
@@ -767,7 +767,7 @@ armadillo-editor/
 ├── render/
 │   ├── arena.c/h
 │   ├── blocks.h                  # BlockKind + Block
-│   ├── inlines.h                 # StyleKind + StyleRun
+│   ├── inlines.h                 # StyleKind + MdStyleRun
 │   ├── render.c/h
 │   ├── draw_qd.h                 # DrawOps vtable (pure, no QuickDraw include)
 │   ├── arena_test.c

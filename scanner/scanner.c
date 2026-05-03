@@ -1,7 +1,7 @@
 /*
  * scanner/scanner.c — style-run producer for the source pane.
  *
- * Consumes MdParseSink events and appends StyleRun tuples to an
+ * Consumes MdParseSink events and appends MdStyleRun tuples to an
  * arena-allocated array. Every run is (start, length, kind, link_index).
  *
  * Span events map 1:1 to runs (one event = one run, same byte range).
@@ -22,7 +22,7 @@
 
 struct Scanner {
     Arena*          arena;
-    StyleRun*       runs;           /* arena-allocated, grown in chunks */
+    MdStyleRun*       runs;           /* arena-allocated, grown in chunks */
     size_t          run_count;
     size_t          run_capacity;
 
@@ -35,24 +35,24 @@ struct Scanner {
 static int scanner_grow(Scanner* s, size_t needed) {
     size_t next;
     size_t bytes;
-    StyleRun* newbuf;
+    MdStyleRun* newbuf;
 
     if (needed <= s->run_capacity) return 0;
     next = s->run_capacity ? s->run_capacity : 16;
     while (next < needed) next *= 2;
-    bytes = next * sizeof(StyleRun);
+    bytes = next * sizeof(MdStyleRun);
     if (arena_ensure(s->arena, bytes) != 0) return -1;
-    newbuf = (StyleRun*)arena_alloc(s->arena, bytes);
+    newbuf = (MdStyleRun*)arena_alloc(s->arena, bytes);
     if (!newbuf) return -1;
     if (s->runs && s->run_count > 0) {
-        memcpy(newbuf, s->runs, s->run_count * sizeof(StyleRun));
+        memcpy(newbuf, s->runs, s->run_count * sizeof(MdStyleRun));
     }
     s->runs = newbuf;
     s->run_capacity = next;
     return 0;
 }
 
-static int scanner_push(Scanner* s, StyleRun r) {
+static int scanner_push(Scanner* s, MdStyleRun r) {
     if (scanner_grow(s, s->run_count + 1) != 0) return -1;
     s->runs[s->run_count++] = r;
     return 0;
@@ -77,7 +77,7 @@ static int sc_block_close(void* ctx, BlockKind k) {
     if (k == kBlockHtml && s->in_html_block) {
         s->in_html_block = 0;
         if (s->html_seen_any_text) {
-            StyleRun r;
+            MdStyleRun r;
             r.start = s->html_block_start;
             r.length = (unsigned short)(s->html_block_end - s->html_block_start);
             r.kind = kStyleHtmlSpan;
@@ -92,7 +92,7 @@ static int sc_span(void* ctx, StyleKind k, unsigned short start,
                    unsigned short length, const char* url,
                    unsigned short url_len) {
     Scanner* s = (Scanner*)ctx;
-    StyleRun r;
+    MdStyleRun r;
     (void)url; (void)url_len;   /* scanner doesn't track URLs */
     r.start = start;
     r.length = length;
@@ -150,7 +150,7 @@ const MdParseSink* scanner_sink(Scanner* s) {
     return sink;
 }
 
-const StyleRun* scanner_runs(const Scanner* s, size_t* out_count) {
+const MdStyleRun* scanner_runs(const Scanner* s, size_t* out_count) {
     if (out_count) *out_count = s ? s->run_count : 0;
     return s ? s->runs : 0;
 }

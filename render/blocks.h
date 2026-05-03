@@ -29,7 +29,7 @@ typedef struct Block {
     const char*     text;          /* arena-alloc'd; NOT NUL-terminated */
     unsigned short  text_length;
     unsigned short  run_count;
-    const StyleRun* runs;          /* arena-alloc'd; NULL if 0         */
+    const MdStyleRun* runs;          /* arena-alloc'd; NULL if 0         */
 } Block;
 
 #endif /* ARMA_BLOCKS_H */

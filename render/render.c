@@ -26,7 +26,7 @@ struct RenderModel {
     size_t     cur_text_len;
     size_t     cur_text_capacity;
 
-    StyleRun*  cur_runs;
+    MdStyleRun*  cur_runs;
     size_t     cur_run_count;
     size_t     cur_run_capacity;
 };
@@ -100,18 +100,18 @@ static int rm_span(void* ctx, StyleKind k, unsigned short start,
     RenderModel* m = (RenderModel*)ctx;
     size_t next;
     size_t bytes;
-    StyleRun* nb;
-    StyleRun r;
+    MdStyleRun* nb;
+    MdStyleRun r;
     (void)url; (void)url_len;
     if (!m->cur_active) return 0;
     if (m->cur_run_count >= m->cur_run_capacity) {
         next = m->cur_run_capacity ? m->cur_run_capacity * 2 : 4;
-        bytes = next * sizeof(StyleRun);
+        bytes = next * sizeof(MdStyleRun);
         if (arena_ensure(m->arena, bytes) != 0) return -1;
-        nb = (StyleRun*)arena_alloc(m->arena, bytes);
+        nb = (MdStyleRun*)arena_alloc(m->arena, bytes);
         if (!nb) return -1;
         if (m->cur_runs && m->cur_run_count > 0) {
-            memcpy(nb, m->cur_runs, m->cur_run_count * sizeof(StyleRun));
+            memcpy(nb, m->cur_runs, m->cur_run_count * sizeof(MdStyleRun));
         }
         m->cur_runs = nb;
         m->cur_run_capacity = next;

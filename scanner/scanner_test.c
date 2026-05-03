@@ -2,7 +2,7 @@
  * scanner/scanner_test.c — host unit tests for scanner.
  *
  * Feeds synthetic MdParseSink events (NOT real md4c output) into the
- * scanner's sink and asserts on the accumulated StyleRun[]. Bypassing
+ * scanner's sink and asserts on the accumulated MdStyleRun[]. Bypassing
  * md4c keeps tests fast and isolates scanner behavior from any md4c
  * semantic quirks.
  */
@@ -23,7 +23,7 @@ void test_scanner_empty_event_stream_produces_zero_runs(void) {
         Arena* a = 0;
         Scanner* s;
         size_t count = 99;
-        const StyleRun* runs;
+        const MdStyleRun* runs;
         arena_init(&a, 4096, (const MacSyscalls*)&f);
 
         s = scanner_new(a);
@@ -48,7 +48,7 @@ void test_scanner_records_one_run_per_span(void) {
         const MdParseSink* sink;
         BlockAttrs attrs;
         size_t count = 0;
-        const StyleRun* runs;
+        const MdStyleRun* runs;
         arena_init(&a, 4096, (const MacSyscalls*)&f);
         s = scanner_new(a);
         sink = scanner_sink(s);
@@ -78,7 +78,7 @@ void test_scanner_link_run_has_link_index_minus_one(void) {
         Scanner* s;
         const MdParseSink* sink;
         size_t count = 0;
-        const StyleRun* runs;
+        const MdStyleRun* runs;
         arena_init(&a, 4096, (const MacSyscalls*)&f);
         s = scanner_new(a);
         sink = scanner_sink(s);
@@ -103,7 +103,7 @@ void test_scanner_html_block_emits_one_run_covering_all_text_events(void) {
         Scanner* s;
         const MdParseSink* sink;
         size_t count = 0;
-        const StyleRun* runs;
+        const MdStyleRun* runs;
         arena_init(&a, 4096, (const MacSyscalls*)&f);
         s = scanner_new(a);
         sink = scanner_sink(s);

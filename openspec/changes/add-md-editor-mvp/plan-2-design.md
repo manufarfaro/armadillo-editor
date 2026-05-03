@@ -31,14 +31,14 @@ A single Plan 2 covering everything would mean every Toolbox bug surfaces at onc
 | `src/app.c` | replaces `stub_main.c` | Toolbox init (`InitGraf` / `InitFonts` / `InitWindows` / `InitMenus` / `TEInit` / `InitDialogs` / `FlushEvents`), production `MacSyscalls` struct (file-scope static, per-module-static MacSyscalls long-lived ownership rule), main `WaitNextEvent` loop, dispatch to `menus_handle_command` and `win_editor_handle_event`, idle-time `debounce_poll` and parse-cycle drive (2b) | 2a + 2b |
 | `src/menus.c/.h` | new | Menu setup from `MBAR` 128, `menus_handle_command(menu, item, win, sys)` dispatch table, About box (`Alert` 256), ⌘-shortcut routing via `MenuKey` | 2a |
 | `src/win_editor.c/.h` | new | Opens the `WIND` 128 window, owns one `Doc*` + one `SrcPane*` + one `RenderModel*` + one `Arena*`, lays out source-pane bounds inside the content area, handles `mouseDown` / `keyDown` / `updateEvt` / `activateEvt`, drives the parse cycle (2b), implements view toggle (2b) | 2a (skeleton) + 2b (parse cycle, view toggle) |
-| `src_pane/src_pane.c` | new (header `src_pane.h` already exists) | `TENew`-backed editable pane behind the vendor-free `src_pane.h` API; `src_pane_handle_event` forwards to `TEKey` / `TEClick`; `src_pane_apply_runs` walks the `StyleRun[]` and calls `TESetStyle`; `src_pane_draw` calls `TEUpdate` | 2a (no styling) + 2b (apply runs) |
+| `src_pane/src_pane.c` | new (header `src_pane.h` already exists) | `TENew`-backed editable pane behind the vendor-free `src_pane.h` API; `src_pane_handle_event` forwards to `TEKey` / `TEClick`; `src_pane_apply_runs` walks the `MdStyleRun[]` and calls `TESetStyle`; `src_pane_draw` calls `TEUpdate` | 2a (no styling) + 2b (apply runs) |
 | `render/draw_qd_real.c/.h` | new | Real `DrawOps` vtable: thin forwarders to `SetFont` / `MoveTo` / `DrawText` / `LineTo` / `FrameRect` / `GetFontInfo`, plus `RGBForeColor` for `set_fg` | 2a (struct exists, exercised indirectly via TextEdit) + 2b (used directly by `render_layout_and_draw`) |
 | `src/file_io.c` | extend existing | Replace the Plan 1 `kFileIoErrCancel` stubs in `file_io_open_interactive` and `file_io_save_as` with real `StandardGetFile` / `StandardPutFile` flows that delegate to existing `file_io_open` / `file_io_save` data paths | 2b |
 | `test/smoke_test.c` | new test app | Separate `.APPL` (second CMake target). Hardcoded sequence: open a bundled fixture `.md`, validate `doc_text()` length, run a parse cycle through the real arena + render, save to `Smoketest.md` next to the app, exit. Manual-eyeball verification on QEMU before tagging `v0.2.0` | 2b |
 
 Two architectural rules from earlier work are preserved:
 
-**Vendor-free public headers (CLAUDE.md HARD rule).** No `WindowPtr`, `TEHandle`, `FSSpec`, `RGBColor`, or other Toolbox types cross any `.h` boundary. `src_pane.h`, `win_editor.h`, `menus.h` use opaque pointers (`SrcPane*`, `WinEditor*`) and project-owned types (`StyleRun`, `BlockKind`). `.c` files internally cast to/from Toolbox types as needed.
+**Vendor-free public headers (CLAUDE.md HARD rule).** No `WindowPtr`, `TEHandle`, `FSSpec`, `RGBColor`, or other Toolbox types cross any `.h` boundary. `src_pane.h`, `win_editor.h`, `menus.h` use opaque pointers (`SrcPane*`, `WinEditor*`) and project-owned types (`MdStyleRun`, `BlockKind`). `.c` files internally cast to/from Toolbox types as needed.
 
 **Per-call vs. long-lived `MacSyscalls`** (from `arena-owns-macsyscalls`):
 - `app.c`'s production `MacSyscalls` is file-scope static — lives for program lifetime, no copy needed.
@@ -82,7 +82,7 @@ Triggered when `debounce_poll` returns 1 (≥ 250 ms since last keystroke). `win
 3. `arena_ensure(arena, len * 4 + 16384)` — grow before parse, never grow mid-parse (`design.md` §4 footgun)
 4. Build `MdParseSink[]` array of two: render sink + scanner sink
 5. `mdparse_run(text, len, sinks, 2)`
-6. **Success path:** commit new `RenderModel` + push `StyleRun[]` to `src_pane_apply_runs(pane, runs, run_count)`
+6. **Success path:** commit new `RenderModel` + push `MdStyleRun[]` to `src_pane_apply_runs(pane, runs, run_count)`
 7. **Failure path:** clear `current_model = NULL`, leave src pane styled as last good state (no error alert — would spam during long edits)
 
 ### View toggle (2b)

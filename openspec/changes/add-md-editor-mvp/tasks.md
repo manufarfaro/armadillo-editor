@@ -21,7 +21,7 @@ Ordered TDD task list. Groups run in sequence; tasks within a group can be paral
 Producing these headers unblocks Group 2 (tests) to be written in parallel. No `.c` files in this group.
 
 - [ ] 1.1 `render/blocks.h` — `BlockKind` enum, `Block` struct, exactly as in `design.md` §1.1
-- [ ] 1.2 `render/inlines.h` — `StyleKind` enum, `StyleRun` struct
+- [ ] 1.2 `render/inlines.h` — `StyleKind` enum, `MdStyleRun` struct
 - [ ] 1.3 `render/arena.h` — opaque `Arena*` + public API (init/destroy/ensure/alloc/reset/high_water/capacity)
 - [ ] 1.4 `render/draw_qd.h` — `DrawOps` vtable struct + `DrawContext`
 - [ ] 1.5 `render/render.h` — opaque `RenderModel*` + public API + `LayoutParams` + `render_layout_and_draw`
@@ -69,7 +69,7 @@ Written against the Group 1 headers; unimplemented modules link-fail or return d
 
 - [ ] 2.23 `scanner/scanner_test.c` — harness
 - [ ] 2.24 Test: empty event stream produces 0 runs
-- [ ] 2.25 Test: on_span(kStyleStrong, start=5, length=8) produces one StyleRun with matching fields
+- [ ] 2.25 Test: on_span(kStyleStrong, start=5, length=8) produces one MdStyleRun with matching fields
 - [ ] 2.26 Test: multiple non-overlapping spans produce multiple runs in input order
 - [ ] 2.27 Test: nested spans (e.g., bold containing italic) produce runs for each with correct ranges
 - [ ] 2.28 Test: heading open produces a full-line kStylePlain run covering the heading text (for "heading" coloring)

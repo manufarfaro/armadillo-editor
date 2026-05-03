@@ -80,7 +80,7 @@ const Block*         render_model_block_at(const RenderModel*, size_t);
 
 ### Requirement: Style runs per block
 
-Each `Block` carries an array of `StyleRun` tuples describing inline styling within the block's text. The runs are arena-allocated; each run's `start` and `length` are relative to `Block.text`, not to the original source buffer.
+Each `Block` carries an array of `MdStyleRun` tuples describing inline styling within the block's text. The runs are arena-allocated; each run's `start` and `length` are relative to `Block.text`, not to the original source buffer.
 
 #### Scenario: Paragraph with one bold span
 - GIVEN source `Hello **world** end` producing one paragraph block
@@ -97,7 +97,7 @@ The eventual model SHALL maintain a separate arena-allocated link table mapping 
 #### Scenario: Link run resolves to URL (deferred)
 - GIVEN a paragraph with one `[text](http://ex.com)` link
 - WHEN the model is built
-- THEN the paragraph's single `StyleRun` has `link_index == 0`
+- THEN the paragraph's single `MdStyleRun` has `link_index == 0`
 - AND the link table entry at index 0 contains "http://ex.com" with length 13
 
 ### Requirement: `DrawOps` vtable
@@ -156,7 +156,7 @@ Per-block horizontal offset = `indent_list * list_depth + indent_quote * quote_d
 
 ### Requirement: Inline style run application
 
-During block drawing, the renderer SHALL apply each `StyleRun` by emitting `set_font` / `set_fg` calls before the run's text and restoring the block's default style after. Inline run styles are the same mapping the source pane uses (see `src-pane` spec), with the exception that `kStyleLink` draws in the link color and underlined face.
+During block drawing, the renderer SHALL apply each `MdStyleRun` by emitting `set_font` / `set_fg` calls before the run's text and restoring the block's default style after. Inline run styles are the same mapping the source pane uses (see `src-pane` spec), with the exception that `kStyleLink` draws in the link color and underlined face.
 
 #### Scenario: Bold run in a paragraph
 - GIVEN a kBlockParagraph with text "plain bold rest" and run `{start=6, length=4, kind=kStyleStrong}`

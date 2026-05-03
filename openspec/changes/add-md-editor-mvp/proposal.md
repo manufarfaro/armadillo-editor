@@ -15,7 +15,7 @@ The MVP corresponds to Tier 0 + Tier 1 in the tier roadmap (see `PRD.md`). Subse
 - Standard File Open / Save / Save As flows for `.md` files up to 32,767 bytes
 - Source pane as an opaque vendor-free module, implemented with Mac Toolbox TextEdit under the hood, exposing `SrcPane*` API plus style-run application
 - Markdown parsing via vendored md4c, called through a project-owned sink-dispatching adapter (`mdparse`)
-- Syntax scanner producing `StyleRun` arrays from md4c events, applied to the source pane on each debounced edit cycle
+- Syntax scanner producing `MdStyleRun` arrays from md4c events, applied to the source pane on each debounced edit cycle
 - Block/inline layout engine in a top-level `render/` module: flat block array, arena-backed allocation, mockable `DrawOps` emitter, real-QuickDraw emitter for production
 - View menu toggle between Source and Read modes; one mode visible at a time
 - Inline HTML rendered as literal text in MVP (md4c-detected HTML blocks/spans are shown as-is, colored distinctly); whitelist-rendered HTML is deferred to Tier 2
@@ -57,7 +57,7 @@ Single pipeline, two consumers, flat intermediate model:
 2. **Debounce poll** in the main event loop's `WaitNextEvent` tick: if 250 ms have elapsed since the last keystroke and `dirty` is set, run a parse cycle.
 3. **Single md4c parse** of the source buffer. md4c's SAX-style callbacks are dispatched by our `mdparse` adapter to an array of sinks.
 4. **Two sinks consume the same event stream:**
-   - The **scanner** accumulates `StyleRun` tuples (start, length, kind) for the source pane's syntax coloring.
+   - The **scanner** accumulates `MdStyleRun` tuples (start, length, kind) for the source pane's syntax coloring.
    - The **render** module builds a `RenderModel`: a flat array of `Block` structs (no tree) with nesting expressed via `list_depth` / `quote_depth` scalar fields, arena-allocated inside a single `HLock`ed `Handle`.
 5. **After parse:** scanner's style runs are applied to the source pane via its vendor-free API; render pane is invalidated and redraws on the next update event via a `DrawOps` emitter (real QuickDraw in production, a recorder in tests).
 
