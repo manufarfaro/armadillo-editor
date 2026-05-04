@@ -17,9 +17,11 @@
 #include "render/draw_qd.h"
 #include "scanner/scanner.h"
 #include "mdparse/mdparse.h"
+#include "src/file_io.h"
 #include <Windows.h>
 #include <Events.h>
 #include <Menus.h>
+#include <Dialogs.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -138,9 +140,35 @@ void win_editor_handle_event(WinEditor* w, const void* event_record) {
 }
 
 int win_editor_close(WinEditor* w) {
-    /* Plan 2a: no dirty guard. Plan 2b adds StopAlert(257). */
-    win_editor_free(w);
-    return 1;
+    short hit;
+    int   save_rc;
+
+    if (!w) return 1;
+    if (!w->doc || !doc_is_dirty(w->doc)) {
+        win_editor_free(w);
+        return 1;
+    }
+
+    /* StopAlert 257 — DITL items: 1=Save, 2=static text, 3="Don't Save",
+     * 4=Cancel. Save uses file_io_save with fall-through to Save As if
+     * the doc has no stored FSSpec yet. */
+    hit = StopAlert(257, 0L);
+    switch (hit) {
+    case 1:                                   /* Save */
+        save_rc = file_io_save(w->doc, &w->sys);
+        if (save_rc == kFileIoErrOpen) {
+            save_rc = file_io_save_as(w->doc, &w->sys);
+        }
+        if (save_rc != kFileIoOk) return 0;   /* save failed/cancelled */
+        win_editor_free(w);
+        return 1;
+    case 3:                                   /* Don't Save */
+        win_editor_free(w);
+        return 1;
+    case 4:                                   /* Cancel */
+    default:
+        return 0;
+    }
 }
 
 Doc* win_editor_doc(WinEditor* w) {

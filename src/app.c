@@ -241,10 +241,21 @@ static void event_loop(void) {
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, g_front_window,
                                                           &g_syscalls);
-                    if (act == kMenuActionQuit)  g_quit_requested = 1;
                     if (act == kMenuActionClose && g_front_window) {
-                        win_editor_close(g_front_window);
-                        g_front_window = 0;
+                        if (win_editor_close(g_front_window)) {
+                            g_front_window = 0;
+                        }
+                    }
+                    if (act == kMenuActionQuit) {
+                        if (g_front_window) {
+                            if (win_editor_close(g_front_window)) {
+                                g_front_window = 0;
+                                g_quit_requested = 1;
+                            }
+                            /* user cancelled the close → don't quit */
+                        } else {
+                            g_quit_requested = 1;
+                        }
                     }
                 }
                 break;
@@ -262,8 +273,9 @@ static void event_loop(void) {
                 if (g_front_window
                     && wp == (WindowPtr)win_editor_window_ref(g_front_window)
                     && TrackGoAway(wp, ev.where)) {
-                    win_editor_close(g_front_window);
-                    g_front_window = 0;
+                    if (win_editor_close(g_front_window)) {
+                        g_front_window = 0;
+                    }
                 }
                 break;
             case inDrag: {
@@ -286,10 +298,21 @@ static void event_loop(void) {
                 if (sel) {
                     MenuAction act = menus_handle_command(sel, g_front_window,
                                                           &g_syscalls);
-                    if (act == kMenuActionQuit)  g_quit_requested = 1;
                     if (act == kMenuActionClose && g_front_window) {
-                        win_editor_close(g_front_window);
-                        g_front_window = 0;
+                        if (win_editor_close(g_front_window)) {
+                            g_front_window = 0;
+                        }
+                    }
+                    if (act == kMenuActionQuit) {
+                        if (g_front_window) {
+                            if (win_editor_close(g_front_window)) {
+                                g_front_window = 0;
+                                g_quit_requested = 1;
+                            }
+                            /* user cancelled the close → don't quit */
+                        } else {
+                            g_quit_requested = 1;
+                        }
                     }
                 }
             } else if (g_front_window) {
