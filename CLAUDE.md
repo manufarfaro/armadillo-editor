@@ -13,7 +13,7 @@ The spec comes first; it drives implementation. Before proposing code changes, c
 1. `PRD.md` — product scope, MVP boundary (Tier 0+1), tier roadmap, non-goals.
 2. `openspec/changes/add-md-editor-mvp/design.md` — the 7-section architecture doc. Section 1 (data model), Section 4 (arena), Section 5 (error model) are the most load-bearing.
 3. `openspec/specs/<capability>/spec.md` — authoritative Given/When/Then scenarios for the 7 capabilities (`app-shell`, `doc-store`, `src-pane`, `mdparse`, `scanner`, `render`, `file-io`). These drive TDD.
-4. `openspec/changes/add-md-editor-mvp/plan-1-host-pipeline.md` — ordered TDD step list for the host-testable pipeline (Groups 0–3). Plan 2 (Toolbox wiring + ship) is not written yet.
+4. `openspec/changes/add-md-editor-mvp/tasks.md` — ordered task list across the three milestones (Plan 1: host pipeline shipped, Plan 2a: bare shell shipped at `v0.1.0`, Plan 2b: feature complete targeting `v0.2.0`). Validate via `openspec validate add-md-editor-mvp`; track progress via `openspec list`.
 
 If implementation-time reality conflicts with the design, update the design inline with a dated log entry — do not silently diverge.
 

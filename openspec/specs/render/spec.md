@@ -5,9 +5,7 @@
 Build a flat block model from an `MdParseSink` event stream, lay out that model into line boxes at a given content width, and emit the result as a sequence of QuickDraw-equivalent draw calls through a swappable `DrawOps` vtable. This is the largest capability in the project by code volume; it owns its own arena allocator to manage variable-length data without fighting the Mac OS Memory Manager.
 
 `render` is the implementation of the Read pane. Production code wires `DrawOps` to real QuickDraw (`src/draw_qd.c`); tests wire it to a recording sink that captures every call. This gives us pixel-accurate unit tests for the renderer without requiring a running Toolbox.
-
 ## Requirements
-
 ### Requirement: Arena allocator
 
 The module SHALL provide a `Handle`-backed arena allocator in `render/arena.h`:
@@ -33,6 +31,7 @@ The arena SHALL:
 6. Preserve state on grow failure: high_water and existing allocations remain valid.
 7. Zero its high_water but keep its backing memory on `arena_reset`.
 8. Call `DisposeHandle` exactly once on `arena_destroy`.
+9. **Own its `MacSyscalls` by value.** `arena_init` SHALL accept `const MacSyscalls* sys` as a parameter and copy `*sys` into a `MacSyscalls` field at init. After `arena_init` returns, the Arena MUST NOT depend on the caller's `MacSyscalls` storage lifetime. The 80-byte vtable copy is acceptable overhead in exchange for eliminating the dangling-pointer bug class CodeQL flagged on the previous `const MacSyscalls*` field design.
 
 #### Scenario: Allocation returns aligned pointer
 - GIVEN an arena with capacity > 8 bytes and high_water == 0
@@ -51,9 +50,14 @@ The arena SHALL:
 - WHEN `arena_reset(a)` is called
 - THEN `arena_high_water(a) == 0` and `arena_capacity(a) == 4096`
 
+#### Scenario: Caller's MacSyscalls storage may be released after init
+- GIVEN a stack-local `FakeSyscalls f` and an arena initialized via `arena_init(&a, 4096, (const MacSyscalls*)&f)`
+- WHEN the caller's stack frame holding `f` is later released (or `f` is mutated, or the storage is otherwise reused)
+- THEN `arena_alloc`, `arena_ensure`, `arena_reset`, and `arena_destroy` SHALL continue to function correctly using the by-value `MacSyscalls` snapshot taken at init
+
 ### Requirement: Flat block model
 
-The render model is a flat array of `Block` structs with nesting expressed via scalar `list_depth` and `quote_depth` fields — no tree structure.
+The render model SHALL be a flat array of `Block` structs with nesting expressed via scalar `list_depth` and `quote_depth` fields — no tree structure.
 
 ```c
 typedef struct RenderModel RenderModel;
@@ -80,7 +84,7 @@ const Block*         render_model_block_at(const RenderModel*, size_t);
 
 ### Requirement: Style runs per block
 
-Each `Block` carries an array of `MdStyleRun` tuples describing inline styling within the block's text. The runs are arena-allocated; each run's `start` and `length` are relative to `Block.text`, not to the original source buffer.
+Each `Block` SHALL carry an array of `MdStyleRun` tuples describing inline styling within the block's text. The runs MUST be arena-allocated; each run's `start` and `length` MUST be relative to `Block.text`, not to the original source buffer.
 
 #### Scenario: Paragraph with one bold span
 - GIVEN source `Hello **world** end` producing one paragraph block
@@ -90,7 +94,7 @@ Each `Block` carries an array of `MdStyleRun` tuples describing inline styling w
 
 ### Requirement: Link table (deferred — Tier 2+)
 
-**Status: not in MVP.** For MVP, `kStyleLink` runs carry `link_index = -1` and no link table is maintained. Link click-through and URL storage land in a post-Tier-6 change (see `PRD.md` non-goals). MVP renders link text with the link style (sky-blue + underlined) but does not resolve URLs.
+**Status: not in MVP.** For MVP, `kStyleLink` runs SHALL carry `link_index = -1` and no link table SHALL be maintained. Link click-through and URL storage land in a post-Tier-6 change (see `PRD.md` non-goals). MVP renders link text with the link style (sky-blue + underlined) but MUST NOT resolve URLs.
 
 The eventual model SHALL maintain a separate arena-allocated link table mapping `link_index` values to URL strings. `kStyleLink` runs' `link_index` field indexes into this table. URLs are stored with their lengths (not NUL-terminated).
 
@@ -165,7 +169,7 @@ During block drawing, the renderer SHALL apply each `MdStyleRun` by emitting `se
 
 ### Requirement: Word wrap within content_width (deferred — Tier 2+)
 
-**Status: not in MVP.** For MVP, each block's text is emitted on a single line; text that exceeds `content_width` overflows the window's right edge. Wireframe sample content and typical short documents don't trigger this; real wrap lands alongside the custom text engine that lifts TextEdit's 32-KB ceiling (see `PRD.md` tier roadmap).
+**Status: not in MVP.** For MVP, each block's text SHALL be emitted on a single line; text that exceeds `content_width` is allowed to overflow the window's right edge. Wireframe sample content and typical short documents don't trigger this; real wrap lands alongside the custom text engine that lifts TextEdit's 32-KB ceiling (see `PRD.md` tier roadmap).
 
 The eventual requirement: text within a block SHALL wrap at word boundaries when a line exceeds `params.content_width - block's indent`. Lines advance vertically by `line_height` (retrieved via `DrawOps.get_font_metrics` for the current font). Word boundary detection uses ASCII space as the wrap point (CJK is out of scope for MVP).
 
@@ -176,6 +180,8 @@ The eventual requirement: text within a block SHALL wrap at word boundaries when
 - AND y values differ by at least 16 pixels
 
 ### Requirement: Layout parameters
+
+The render module SHALL accept layout parameters via the following struct:
 
 ```c
 typedef struct LayoutParams {
@@ -206,6 +212,8 @@ The render module SHALL be fully host-testable. Tests construct a `DrawContext` 
 
 ### Requirement: Error reporting
 
+The render module SHALL surface failures via the following error enum:
+
 ```c
 typedef enum {
     kRenderOk             =  0,
@@ -222,3 +230,4 @@ Layout failures SHALL return these error codes. Arena OOM during model construct
 - WHEN `mdparse_run` drives the render model's sink and the arena exhausts
 - THEN the sink returns non-zero and `mdparse_run` returns `kMdParseErrArenaOOM`
 - AND `current_model` remains NULL in the caller
+

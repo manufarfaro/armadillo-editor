@@ -10,6 +10,8 @@ Provide open and save functionality for `.md` files on HFS via the Mac Toolbox F
 
 ### Requirement: Error enum
 
+The file-io module SHALL surface failures via the following error enum:
+
 ```c
 typedef enum {
     kFileIoOk       =  0,
@@ -30,6 +32,8 @@ typedef enum {
 - THEN the comparison uses the named symbol, not a magic number
 
 ### Requirement: Open with Standard File dialog
+
+The file-io module SHALL expose an interactive open entry point with this signature:
 
 ```c
 int file_io_open_interactive(Doc** out_doc, const MacSyscalls*);
@@ -54,6 +58,8 @@ This function SHALL:
 - AND the function returns `kFileIoOk`
 
 ### Requirement: Open by path
+
+The file-io module SHALL expose a path-based open entry point with this signature:
 
 ```c
 int file_io_open(const void* fsspec_opaque, Doc** out_doc, const MacSyscalls*);
@@ -99,6 +105,8 @@ int file_io_open(const void* fsspec_opaque, Doc** out_doc, const MacSyscalls*);
 
 ### Requirement: Save with Standard File dialog (Save As)
 
+The file-io module SHALL expose an interactive save-as entry point with this signature:
+
 ```c
 int file_io_save_as(Doc*, const MacSyscalls*);
 ```
@@ -118,6 +126,8 @@ This function SHALL:
 - AND `doc_has_filename(d)` now returns 1
 
 ### Requirement: Save to existing filename
+
+The file-io module SHALL expose a save-to-cached-filename entry point with this signature:
 
 ```c
 int file_io_save(Doc*, const MacSyscalls*);
