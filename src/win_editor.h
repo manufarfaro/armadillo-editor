@@ -30,6 +30,26 @@ void win_editor_free(WinEditor* w);
  * their own Toolbox-aware .c file. */
 void* win_editor_window_ref(const WinEditor* w);
 
+/* Forward-declared opaque Doc — defined in src/doc.h. We forward-decl
+ * here rather than including doc.h to keep this header lean for
+ * callers that don't otherwise touch Doc. */
+struct Doc;
+typedef struct Doc Doc;
+
+/* Borrowed pointer to the editor's current Doc. Caller MUST NOT free
+ * — the WinEditor owns its lifetime. */
+Doc* win_editor_doc(WinEditor* w);
+
+/* Replace the editor's current Doc with `new_doc`. The old Doc is
+ * freed; `new_doc` ownership transfers to the WinEditor. The source
+ * pane's text is updated to match the new Doc; the window is
+ * invalidated for redraw. NULL `new_doc` is a no-op. */
+void win_editor_set_doc(WinEditor* w, Doc* new_doc);
+
+/* Re-read the Doc's filename and update the window's title to
+ * match (falls back to "Untitled.md" when the Doc has no filename). */
+void win_editor_refresh_title(WinEditor* w);
+
 /* Dispatch a Mac event (mouseDown/keyDown/updateEvt/activateEvt) that
  * has already been determined to belong to this window. The event
  * pointer is opaque here (vendor-free header). */

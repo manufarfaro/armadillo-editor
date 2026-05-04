@@ -26,6 +26,8 @@
 #include "src/mac_syscalls.h"
 #include "src/menus.h"
 #include "src/win_editor.h"
+#include "src/doc.h"
+#include "src/file_io.h"
 #include <MacMemory.h>
 #include <Files.h>
 #include <StandardFile.h>
@@ -171,6 +173,43 @@ static WinEditor* app_new_editor(const MacSyscalls* sys) {
     return g_front_window;
 }
 
+static void app_handle_file_cmd(MenusFileCmd cmd, WinEditor* win,
+                                const MacSyscalls* sys) {
+    int  rc;
+    Doc* d;
+
+    switch (cmd) {
+    case kMenusFileOpen: {
+        Doc* new_doc = 0;
+        rc = file_io_open_interactive(&new_doc, sys);
+        if (rc != kFileIoOk || !new_doc) return;     /* user cancelled or error */
+        if (!g_front_window) g_front_window = win_editor_new(sys);
+        if (!g_front_window) { doc_free(new_doc); return; }
+        win_editor_set_doc(g_front_window, new_doc);
+        win_editor_refresh_title(g_front_window);
+        break;
+    }
+    case kMenusFileSave:
+        if (!win) return;
+        d = win_editor_doc(win);
+        if (!d) return;
+        rc = file_io_save(d, sys);
+        if (rc == kFileIoErrOpen) {
+            /* No FSSpec stored — fall through to Save As. */
+            rc = file_io_save_as(d, sys);
+            if (rc == kFileIoOk) win_editor_refresh_title(win);
+        }
+        break;
+    case kMenusFileSaveAs:
+        if (!win) return;
+        d = win_editor_doc(win);
+        if (!d) return;
+        rc = file_io_save_as(d, sys);
+        if (rc == kFileIoOk) win_editor_refresh_title(win);
+        break;
+    }
+}
+
 static void event_loop(void) {
     EventRecord ev;
     const long sleep_ticks = 60;            /* 1 s — Plan 2b drops to 15 */
@@ -260,6 +299,7 @@ int main(void) {
     toolbox_init();
     menus_install();
     menus_set_new_window_cb(app_new_editor);
+    menus_set_file_cmd_cb(app_handle_file_cmd);
     event_loop();
     return 0;
 }

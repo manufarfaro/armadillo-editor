@@ -14,6 +14,7 @@
 #include <Windows.h>
 #include <Events.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct WinEditor {
     void*       window_ref;     /* WindowPtr, type-erased */
@@ -109,4 +110,38 @@ int win_editor_close(WinEditor* w) {
     /* Plan 2a: no dirty guard. Plan 2b adds StopAlert(257). */
     win_editor_free(w);
     return 1;
+}
+
+Doc* win_editor_doc(WinEditor* w) {
+    return w ? w->doc : 0;
+}
+
+void win_editor_set_doc(WinEditor* w, Doc* new_doc) {
+    if (!w || !new_doc) return;
+    if (w->doc && w->doc != new_doc) doc_free(w->doc);
+    w->doc = new_doc;
+    if (w->src_pane) {
+        unsigned short len = 0;
+        const char* text = doc_text(new_doc, &len);
+        src_pane_set_text(w->src_pane, text, len);
+    }
+    if (w->window_ref) InvalRect(&((WindowPtr)w->window_ref)->portRect);
+}
+
+void win_editor_refresh_title(WinEditor* w) {
+    Str255         title;
+    unsigned char  fn_len = 0;
+    const char*    fn;
+    static const char kDefaultTitle[] = "Untitled.md";
+
+    if (!w || !w->window_ref) return;
+    fn = doc_filename(w->doc, &fn_len);
+    if (fn_len > 0) {
+        title[0] = fn_len;
+        memcpy(title + 1, fn, fn_len);
+    } else {
+        title[0] = (unsigned char)(sizeof kDefaultTitle - 1);
+        memcpy(title + 1, kDefaultTitle, sizeof kDefaultTitle - 1);
+    }
+    SetWTitle((WindowPtr)w->window_ref, title);
 }
