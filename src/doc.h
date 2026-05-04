@@ -33,4 +33,13 @@ void doc_set_filename(Doc* d, const char* bytes, unsigned char len);
 int  doc_has_filename(const Doc* d);
 const char* doc_filename(const Doc* d, unsigned char* out_len);
 
+/* FSSpec storage as opaque bytes — no FSSpec type in the header.
+ * file_io passes its FSSpec via void* casts. The buffer size is fixed
+ * at kDocFsspecBytes (>= sizeof(FSSpec) on classic Mac, with slack). */
+#define kDocFsspecBytes 80
+
+int  doc_has_fsspec(const Doc* d);
+const void* doc_fsspec(const Doc* d);
+void doc_set_fsspec(Doc* d, const void* fsspec_opaque);
+
 #endif /* ARMA_DOC_H */

@@ -86,6 +86,33 @@ Filename storage is an opaque byte sequence — it does NOT include `FSSpec` in 
 - THEN the returned bytes match "notes.md" and `len == 8`
 - AND `doc_has_filename(d)` returns 1
 
+### Requirement: FSSpec association
+
+The module SHALL provide accessors to associate an opaque FSSpec-shaped byte buffer with the Doc, so the file-io module can re-save the document to its original location without re-prompting the user:
+
+```c
+#define kDocFsspecBytes 80  /* >= sizeof(FSSpec) (70 bytes) */
+
+int  doc_has_fsspec(const Doc*);
+const void* doc_fsspec(const Doc*);
+void doc_set_fsspec(Doc*, const void* fsspec_opaque);
+```
+
+`doc_set_fsspec` SHALL copy `kDocFsspecBytes` bytes from `fsspec_opaque` into the Doc's internal buffer. `doc_fsspec` SHALL return a pointer to that internal buffer (or `NULL` if no FSSpec has been set). The buffer's contents are opaque to the doc-store module — only the file-io module interprets them as an FSSpec.
+
+#### Scenario: Fresh Doc has no FSSpec
+- GIVEN `doc_new()` returns a fresh Doc
+- WHEN `doc_has_fsspec` is called
+- THEN the return value is 0
+- AND `doc_fsspec` returns NULL
+
+#### Scenario: Set and read FSSpec round-trip
+- GIVEN a 70-byte buffer of recognizable bytes (e.g., a counted sequence)
+- WHEN `doc_set_fsspec(d, buf)` is called
+- THEN `doc_has_fsspec(d)` returns 1
+- AND `doc_fsspec(d)` returns a non-NULL pointer
+- AND the first 70 bytes at that pointer match the input buffer byte-for-byte
+
 ### Requirement: No Toolbox dependencies
 
 The module SHALL compile cleanly with `-std=c89` using host `cc` without any Toolbox or System 7 headers. No `#include <Handle.h>`, `<FSSpec.h>`, `<TextEdit.h>`, etc.
