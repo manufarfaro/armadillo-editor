@@ -75,6 +75,8 @@ The returned pointer is valid until the next `scanner_reset` or arena reset. Run
 
 ### Requirement: Reset
 
+The scanner SHALL expose a reset entry point with this signature:
+
 ```c
 void scanner_reset(Scanner*);
 ```
