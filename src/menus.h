@@ -37,6 +37,21 @@ void menus_install(void);
 typedef WinEditor* (*MenusNewWindowCb)(const MacSyscalls* sys);
 void menus_set_new_window_cb(MenusNewWindowCb cb);
 
+/* File-operation commands that need the front window's state.
+ * Values are arbitrary — internal to the menus ↔ app contract. */
+typedef enum {
+    kMenusFileOpen   = 0,
+    kMenusFileSave   = 1,
+    kMenusFileSaveAs = 2
+} MenusFileCmd;
+
+/* Callback for File → Open / Save / Save As. menus.c hands the
+ * current front window (may be NULL for Open) and the syscalls
+ * vtable; app.c does the file-io work. */
+typedef void (*MenusFileCmdCb)(MenusFileCmd cmd, WinEditor* win,
+                               const MacSyscalls* sys);
+void menus_set_file_cmd_cb(MenusFileCmdCb cb);
+
 /* Dispatch a packed (menu, item) selector returned from MenuSelect or
  * MenuKey. `win` may be NULL (e.g., About item with no window open).
  * Returns kMenuActionQuit when the user picked File→Quit so the event

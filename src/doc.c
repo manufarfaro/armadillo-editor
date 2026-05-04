@@ -20,6 +20,8 @@ struct Doc {
     int            dirty;
     char           filename[64];
     unsigned char  filename_len;
+    char           fsspec[kDocFsspecBytes];
+    int            has_fsspec;
 };
 
 Doc* doc_new(void) {
@@ -81,4 +83,19 @@ const char* doc_filename(const Doc* d, unsigned char* out_len) {
     }
     if (out_len) *out_len = d->filename_len;
     return d->filename;
+}
+
+int doc_has_fsspec(const Doc* d) {
+    return d ? d->has_fsspec : 0;
+}
+
+const void* doc_fsspec(const Doc* d) {
+    if (!d || !d->has_fsspec) return 0;
+    return d->fsspec;
+}
+
+void doc_set_fsspec(Doc* d, const void* fsspec_opaque) {
+    if (!d || !fsspec_opaque) return;
+    memcpy(d->fsspec, fsspec_opaque, kDocFsspecBytes);
+    d->has_fsspec = 1;
 }

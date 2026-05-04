@@ -62,28 +62,24 @@ int file_io_open(const void* fsspec_opaque, Doc** out_doc, const MacSyscalls*);
 
 `fsspec_opaque` is a `const FSSpec*` cast to `void*` — the vendor-free-header convention (no `FSSpec` in the header). The function SHALL:
 
-1. Open the file's data fork read-only via `MacSyscalls.open_df`.
+1. Open the file's data fork read-only via `MacSyscalls.fsp_open_df`.
 2. Query size via `MacSyscalls.get_eof`.
 3. If size > `kMaxDocBytes`, close and return `kFileIoErrTooBig`.
 4. Allocate a `Handle` of `size` bytes via `MacSyscalls.new_handle`.
 5. `HLock` the handle and `FSRead` the bytes into it.
 6. Construct a `Doc*` via `doc_new()` and copy the bytes via `doc_set_text` (the Doc owns its own storage; the temporary `Handle` is disposed after).
-7. **(Plan 2)** Record the filename on the Doc via `doc_set_filename`. MVP ships without this step — extracting a Pascal-string name from the opaque FSSpec bytes robustly depends on Toolbox helpers that land with the interactive flow. See MVP-deferred note below.
-8. Close the file reference.
-9. On any failure, release all intermediate resources via goto-cleanup and return the appropriate error code.
-
-**MVP-deferred:** step 7 (filename recording) lands in Plan 2 alongside the Standard File interactive flow. The MVP-shipped Doc from `file_io_open` has `doc_has_filename() == 0`, and a subsequent `file_io_save` on that Doc correctly returns `kFileIoErrOpen` (no filename). Once Plan 2 lands `file_io_open_interactive`, it will call `file_io_open` then `doc_set_filename`, closing the gap without changing the data-path API.
+7. Record the FSSpec on the Doc via `doc_set_fsspec(doc, fsspec_opaque)` so a subsequent `file_io_save` can write back to the same location without re-prompting.
+8. Record the filename on the Doc via `doc_set_filename`, copied from the FSSpec's Pascal-string `name` field at byte offset 6 (length byte at [6], characters at [7..]). Reading the layout directly avoids depending on `<Files.h>` in this host-buildable file.
+9. Close the file reference.
+10. On any failure, release all intermediate resources via goto-cleanup and return the appropriate error code.
 
 #### Scenario: Successful open
 - GIVEN a valid markdown file on disk
 - WHEN `file_io_open` is called
 - THEN `kFileIoOk` is returned
 - AND `*out_doc` points to a Doc with the file's bytes of text
-
-#### Scenario: Successful open records filename (deferred — Plan 2)
-- GIVEN a 4096-byte valid markdown file on disk
-- WHEN `file_io_open` is called (after Plan 2's filename-extraction lands)
-- THEN `doc_has_filename(*out_doc)` returns 1
+- AND `doc_has_fsspec(*out_doc)` returns 1
+- AND `doc_has_filename(*out_doc)` returns 1 when the FSSpec carries a non-empty Pascal-string name
 
 #### Scenario: File exceeds size limit
 - GIVEN a 40000-byte file on disk (> 32767)
@@ -110,14 +106,16 @@ This function SHALL:
 
 1. Call `MacSyscalls.standard_put_file` to present the standard Save dialog.
 2. On cancel, return `kFileIoErrCancel`.
-3. On confirm, call `file_io_save` with the resulting `FSSpec` and propagate its return value.
-4. On success, update the Doc's filename via `doc_set_filename`.
+3. On confirm, attempt `MacSyscalls.fsp_create` with creator `'Arma'` and type `'TEXT'`. If the file already exists (`dupFNErr`), proceed to step 4 anyway — the file-write sequence will overwrite it.
+4. Record the FSSpec on the Doc via `doc_set_fsspec(d, fsspec)` and the leaf name via `doc_set_filename(d, fsspec.name + 1, fsspec.name[0])`.
+5. Call `file_io_save` with the now-stored FSSpec and propagate its return value.
 
 #### Scenario: Save As from scratch
-- GIVEN a Doc with no filename and text "Hello"
+- GIVEN a Doc with no FSSpec and text "Hello"
 - WHEN `file_io_save_as` is called and the user picks "newfile.md"
 - THEN `kFileIoOk` is returned
 - AND the file "newfile.md" exists on disk containing "Hello"
+- AND `doc_has_fsspec(d)` now returns 1
 - AND `doc_has_filename(d)` now returns 1
 
 ### Requirement: Save to existing filename
@@ -130,29 +128,27 @@ int file_io_save(Doc*, const MacSyscalls*);
 
 This function SHALL:
 
-1. Read the Doc's filename via `doc_filename`; if the Doc has no filename (`doc_has_filename == 0`), return `kFileIoErrOpen` with no I/O performed (caller should use `file_io_save_as` first).
-2. Open the file's data fork read/write via `MacSyscalls.open_df`.
-3. Truncate to 0 via `SetEOF(ref, 0)` (through `MacSyscalls.set_eof`).
-4. Write the Doc's text bytes via `FSWrite`.
-5. Close the file reference.
+1. Read the Doc's stored FSSpec via `doc_fsspec`; if the Doc has no FSSpec (`doc_has_fsspec == 0`), return `kFileIoErrOpen` with no I/O performed (caller should use `file_io_save_as` first).
+2. Open the file's data fork read/write via `MacSyscalls.fsp_open_df` with permission `fsRdWrPerm` (3).
+3. Truncate to 0 via `MacSyscalls.set_eof(ref, 0)`.
+4. Write the Doc's text bytes via `MacSyscalls.fs_write` (the full count is passed in `io_count`).
+5. Close the file reference via `MacSyscalls.fs_close`.
 6. Call `doc_mark_clean(d)` on success.
 
-The file's `TEXT` type and creator code are preserved across saves. On a new file (created by `file_io_save_as`'s underlying `FSpCreate`), the creator code is set to `'Arma'` and type to `'TEXT'`.
+The file's `TEXT` type and creator code are preserved across saves. On a new file (created by `file_io_save_as`'s underlying `fsp_create`), the creator code is set to `'Arma'` and type to `'TEXT'`.
 
-**MVP-deferred:** the actual write sequence (steps 2–5 above) lands in Plan 2 alongside the Standard File interactive flow. MVP `file_io_save` executes step 1 (filename check → `kFileIoErrOpen` if missing) and step 6 (clear dirty flag) only. Save-preserves-byte-content and CR-line-endings-preserved scenarios below are therefore Plan 2 scenarios.
-
-#### Scenario: Save preserves byte-for-byte content (deferred — Plan 2)
-- GIVEN a Doc with text bytes `[0x23, 0x20, 0x48, 0x69]` ("# Hi") and a valid filename
-- WHEN `file_io_save` is called (after Plan 2's write path lands)
+#### Scenario: Save preserves byte-for-byte content
+- GIVEN a Doc with text bytes `[0x23, 0x20, 0x48, 0x69]` ("# Hi") and a stored FSSpec
+- WHEN `file_io_save` is called
 - THEN the file on disk contains exactly those 4 bytes, no line-ending conversion, no BOM, no trailing newline
 
 #### Scenario: Save clears dirty flag
-- GIVEN a dirty Doc with a valid filename
+- GIVEN a dirty Doc with a stored FSSpec
 - WHEN `file_io_save` succeeds
 - THEN `doc_is_dirty(d)` returns 0
 
-#### Scenario: Save without filename fails cleanly
-- GIVEN a Doc with `doc_has_filename == 0`
+#### Scenario: Save without FSSpec fails cleanly
+- GIVEN a Doc with `doc_has_fsspec == 0`
 - WHEN `file_io_save` is called
 - THEN `kFileIoErrOpen` is returned
 - AND no file I/O is attempted
@@ -170,9 +166,9 @@ Every `file_io_*` function SHALL use the goto-cleanup pattern: on any failure pa
 
 The MVP SHALL NOT perform any line-ending conversion. Files are read and written byte-for-byte. If a file contains CR line endings (classic Mac convention), they are stored as CR in the Doc's buffer and surface to the source pane as-is. If it contains LF (Unix) or CRLF (Windows), same. The source pane's text engine handles display.
 
-#### Scenario: CR line endings preserved (deferred — Plan 2 write path)
+#### Scenario: CR line endings preserved
 - GIVEN a file on disk with bytes `[0x41, 0x0D, 0x42]` ("A", CR, "B")
-- WHEN opened via `file_io_open` then saved again (after Plan 2's write path lands)
+- WHEN opened via `file_io_open` then saved again via `file_io_save`
 - THEN the file on disk still contains exactly `[0x41, 0x0D, 0x42]`
 
 ### Requirement: Host testability (data-path parts)

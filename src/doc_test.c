@@ -110,6 +110,35 @@ void test_doc_filename_round_trip(void) {
     doc_free(d);
 }
 
+void test_doc_fresh_has_no_fsspec(void) {
+    Doc* d = doc_new();
+    TEST_ASSERT_EQUAL_INT(0, doc_has_fsspec(d));
+    TEST_ASSERT_NULL(doc_fsspec(d));
+    doc_free(d);
+}
+
+void test_doc_set_fsspec_round_trip(void) {
+    Doc* d = doc_new();
+    /* Fill a recognizable byte pattern: 0, 1, 2, ..., 69 (70 bytes,
+     * matching the actual sizeof(FSSpec) on classic Mac). The remaining
+     * kDocFsspecBytes - 70 bytes are slack and may be uninitialized. */
+    unsigned char input[kDocFsspecBytes];
+    int i;
+    for (i = 0; i < kDocFsspecBytes; i++) input[i] = (unsigned char)i;
+
+    doc_set_fsspec(d, input);
+    TEST_ASSERT_EQUAL_INT(1, doc_has_fsspec(d));
+
+    {
+        const unsigned char* stored = (const unsigned char*)doc_fsspec(d);
+        TEST_ASSERT_NOT_NULL(stored);
+        /* The first 70 bytes (the FSSpec content) MUST match. */
+        TEST_ASSERT_EQUAL_MEMORY(input, stored, 70);
+    }
+
+    doc_free(d);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_doc_new_returns_non_null_empty_clean_doc);
@@ -119,5 +148,7 @@ int main(void) {
     RUN_TEST(test_doc_set_text_over_limit_is_rejected);
     RUN_TEST(test_doc_mark_clean_clears_dirty);
     RUN_TEST(test_doc_filename_round_trip);
+    RUN_TEST(test_doc_fresh_has_no_fsspec);
+    RUN_TEST(test_doc_set_fsspec_round_trip);
     return UNITY_END();
 }

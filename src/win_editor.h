@@ -30,6 +30,59 @@ void win_editor_free(WinEditor* w);
  * their own Toolbox-aware .c file. */
 void* win_editor_window_ref(const WinEditor* w);
 
+/* Forward-declared opaque Doc — defined in src/doc.h. We forward-decl
+ * here rather than including doc.h to keep this header lean for
+ * callers that don't otherwise touch Doc. */
+struct Doc;
+typedef struct Doc Doc;
+
+/* Borrowed pointer to the editor's current Doc. Caller MUST NOT free
+ * — the WinEditor owns its lifetime. */
+Doc* win_editor_doc(WinEditor* w);
+
+/* Replace the editor's current Doc with `new_doc`. The old Doc is
+ * freed; `new_doc` ownership transfers to the WinEditor. The source
+ * pane's text is updated to match the new Doc; the window is
+ * invalidated for redraw. NULL `new_doc` is a no-op. */
+void win_editor_set_doc(WinEditor* w, Doc* new_doc);
+
+/* Re-read the Doc's filename and update the window's title to
+ * match (falls back to "Untitled.md" when the Doc has no filename). */
+void win_editor_refresh_title(WinEditor* w);
+
+/* View mode: which pane the editor window is currently displaying.
+ * Source mode shows the TextEdit-backed source pane; Read mode hides
+ * the source pane and draws the Read view via render_layout_and_draw. */
+typedef enum {
+    kWinModeSource = 0,
+    kWinModeRead   = 1
+} WinMode;
+
+/* Switch view mode. No-op if already in the requested mode.
+ * Activates / deactivates the source pane appropriately and
+ * invalidates the window for redraw. */
+void win_editor_set_mode(WinEditor* w, WinMode mode);
+
+/* Read-only accessor for the current mode. */
+WinMode win_editor_mode(const WinEditor* w);
+
+/* Forward-declared opaque DebounceState — defined in src/debounce.h. */
+struct DebounceState;
+typedef struct DebounceState DebounceState;
+
+/* Borrowed pointer to the editor's per-window debounce state. The
+ * event loop polls this on idle ticks; on fire it calls
+ * win_editor_run_parse. */
+DebounceState* win_editor_debounce_state(WinEditor* w);
+
+/* Run a full parse cycle: sync doc text from the source pane, reset
+ * the arena, ensure capacity, build a new RenderModel + Scanner inside
+ * the arena, parse via mdparse_run, apply scanner runs to the source
+ * pane, invalidate the window for redraw. Silent on parse failure
+ * (clears current_model so the Read pane stays blank until the next
+ * successful parse). */
+void win_editor_run_parse(WinEditor* w);
+
 /* Dispatch a Mac event (mouseDown/keyDown/updateEvt/activateEvt) that
  * has already been determined to belong to this window. The event
  * pointer is opaque here (vendor-free header). */

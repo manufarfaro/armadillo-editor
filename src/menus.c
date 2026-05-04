@@ -23,10 +23,18 @@
 #define kFileSaveAs   6
 #define kFileQuit     8
 
+#define kViewSource   1
+#define kViewRead     2
+
 static MenusNewWindowCb g_new_window_cb = 0;
+static MenusFileCmdCb   g_file_cmd_cb   = 0;
 
 void menus_set_new_window_cb(MenusNewWindowCb cb) {
     g_new_window_cb = cb;
+}
+
+void menus_set_file_cmd_cb(MenusFileCmdCb cb) {
+    g_file_cmd_cb = cb;
 }
 
 void menus_install(void) {
@@ -52,14 +60,29 @@ MenuAction menus_handle_command(long menu_select, WinEditor* win,
         }
         /* item 2 is the separator; items 3+ are DAs (handled by OS). */
         break;
+    case kMenuView:
+        if (win) {
+            if (item == kViewSource) win_editor_set_mode(win, kWinModeSource);
+            if (item == kViewRead)   win_editor_set_mode(win, kWinModeRead);
+        }
+        break;
     case kMenuFile:
         switch (item) {
         case kFileNew:
             if (g_new_window_cb) (void)g_new_window_cb(sys);
             break;
+        case kFileOpen:
+            if (g_file_cmd_cb) g_file_cmd_cb(kMenusFileOpen, win, sys);
+            break;
+        case kFileSave:
+            if (g_file_cmd_cb) g_file_cmd_cb(kMenusFileSave, win, sys);
+            break;
+        case kFileSaveAs:
+            if (g_file_cmd_cb) g_file_cmd_cb(kMenusFileSaveAs, win, sys);
+            break;
         case kFileClose: action = kMenuActionClose; break;
         case kFileQuit:  action = kMenuActionQuit;  break;
-        default: break;         /* Open/Save/SaveAs land in Plan 2b */
+        default: break;
         }
         break;
     default: break;             /* other menus land in later steps */

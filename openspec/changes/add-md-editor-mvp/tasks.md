@@ -36,37 +36,37 @@ Implementation checklist for the MVP. Tasks ship in three milestones:
 
 ### 3a. File I/O interactive flows
 
-- [ ] 3.1 Replace `file_io_open_interactive` stub with real `StandardGetFile` flow (filtered for `'TEXT'`); delegate to existing `file_io_open` data path
-- [ ] 3.2 Replace `file_io_save_as` stub with real `StandardPutFile` flow; update `Doc` filename on success
-- [ ] 3.3 Wire `File → Open…` and `File → Save As…` menu items in `src/menus.c` to call into `file_io_*` and swap doc on the front window
-- [ ] 3.4 Wire `File → Save` to `file_io_save` (uses cached filename); fall through to Save As if no filename
+- [x] 3.1 Replace `file_io_open_interactive` stub with real `StandardGetFile` flow (filtered for `'TEXT'`); delegate to existing `file_io_open` data path
+- [x] 3.2 Replace `file_io_save_as` stub with real `StandardPutFile` flow; update `Doc` filename on success
+- [x] 3.3 Wire `File → Open…` and `File → Save As…` menu items in `src/menus.c` to call into `file_io_*` and swap doc on the front window
+- [x] 3.4 Wire `File → Save` to `file_io_save` (uses cached filename); fall through to Save As if no filename
 - [ ] 3.5 Verify on QEMU: open an `.md`, edit, save, reopen, byte-for-byte match
 
 ### 3b. Parse cycle drive
 
-- [ ] 3.6 Add `Arena*` field + `RenderModel*` field + `Scanner*` field + `DebounceState` to `WinEditor` struct
-- [ ] 3.7 `win_editor_run_parse(win)`: `arena_reset` → snapshot doc text → `arena_ensure(len*4 + 16384)` → build `MdParseSink[2]` (render sink + scanner sink) → `mdparse_run` → on success commit new `RenderModel` + push runs to `src_pane_apply_runs`; on failure clear `current_model = NULL` (no alert)
-- [ ] 3.8 Drop event-loop sleep from 60 ticks to 15 in `src/app.c` so `debounce_poll` fires within ~250 ms
-- [ ] 3.9 Idle-time `debounce_poll(&debounce_state, &g_syscalls)` in the event loop; on fire, call `win_editor_run_parse(g_front_window)`
-- [ ] 3.10 `src_pane`'s edit callback fires after `TEKey` mutates the doc, calling `debounce_on_edit` to mark dirty + capture the tick
+- [x] 3.6 Add `Arena*` field + `RenderModel*` field + `Scanner*` field + `DebounceState` to `WinEditor` struct
+- [x] 3.7 `win_editor_run_parse(win)`: `arena_reset` → snapshot doc text → `arena_ensure(len*4 + 16384)` → build `MdParseSink[2]` (render sink + scanner sink) → `mdparse_run` → on success commit new `RenderModel` + push runs to `src_pane_apply_runs`; on failure clear `current_model = NULL` (no alert)
+- [x] 3.8 Drop event-loop sleep from 60 ticks to 15 in `src/app.c` so `debounce_poll` fires within ~250 ms
+- [x] 3.9 Idle-time `debounce_poll(&debounce_state, &g_syscalls)` in the event loop; on fire, call `win_editor_run_parse(g_front_window)`
+- [x] 3.10 `src_pane`'s edit callback fires after `TEKey` mutates the doc, calling `debounce_on_edit` to mark dirty + capture the tick
 
 ### 3c. Syntax coloring
 
-- [ ] 3.11 Implement `src_pane_apply_runs` — walk the `MdStyleRun[]` and call `TESetStyle` for each run's range with the style's font + color (from a small style-table helper in `src_pane.c`)
+- [x] 3.11 Implement `src_pane_apply_runs` — walk the `MdStyleRun[]` and call `TESetStyle` for each run's range with the style's font + color (from a small style-table helper in `src_pane.c`)
 - [ ] 3.12 Verify on QEMU: typing `# heading`, `**bold**`, `_italic_`, `[link](url)`, `` `code` `` shows distinct visual styles
 
 ### 3d. View toggle + Read pane render
 
-- [ ] 3.13 `win_editor_set_mode(win, kModeSource | kModeRead)` — Source mode shows `SrcPane`; Read mode hides it and routes update events to `render_layout_and_draw`
-- [ ] 3.14 Wire `View → Source` and `View → Read` menu items in `src/menus.c`; check the active mode item in the menu
-- [ ] 3.15 Fill in `render/draw_qd.c` callbacks with real QuickDraw calls — `SetFont`, `MoveTo`, `DrawText`, `LineTo`, `FrameRect`, `GetFontInfo`, `RGBForeColor`
+- [x] 3.13 `win_editor_set_mode(win, kModeSource | kModeRead)` — Source mode shows `SrcPane`; Read mode hides it and routes update events to `render_layout_and_draw`
+- [x] 3.14 Wire `View → Source` and `View → Read` menu items in `src/menus.c`; check the active mode item in the menu
+- [x] 3.15 Fill in `render/draw_qd.c` callbacks with real QuickDraw calls — `SetFont`, `MoveTo`, `DrawText`, `LineTo`, `FrameRect`, `GetFontInfo`, `RGBForeColor`
 - [ ] 3.16 Verify on QEMU: Read pane renders headings (Chicago 17 bold for H1, Chicago 14 bold for H2), paragraphs (Geneva 12), code (Monaco 10), bullets, blockquote bars, horizontal rules
 
 ### 3e. Unsaved-changes guard
 
-- [ ] 3.17 `win_editor_close_with_guard` — when `doc_is_dirty(doc)` is true, show `StopAlert(257)` (Save / Don't Save / Cancel)
-- [ ] 3.18 Wire `File → Close` and the window's go-away box to use the guard
-- [ ] 3.19 Wire `File → Quit` (and ⌘Q) to use the guard before exiting
+- [x] 3.17 `win_editor_close_with_guard` — when `doc_is_dirty(doc)` is true, show `StopAlert(257)` (Save / Don't Save / Cancel)
+- [x] 3.18 Wire `File → Close` and the window's go-away box to use the guard
+- [x] 3.19 Wire `File → Quit` (and ⌘Q) to use the guard before exiting
 
 ### 3f. Smoke test `.APPL`
 
