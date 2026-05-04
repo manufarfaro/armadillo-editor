@@ -40,7 +40,9 @@ SrcPane* src_pane_new(const SrcPaneParams* params, const MacSyscalls* sys) {
 
     GetPort(&saved);
     SetPort((WindowPtr)params->window_ref);
-    p->te = TENew(&dest, &view);
+    /* Style-aware TextEdit: lets src_pane_apply_runs use TESetStyle.
+     * (Plain TENew would silently no-op style operations.) */
+    p->te = TEStyleNew(&dest, &view);
     SetPort(saved);
     if (!p->te) { free(p); return 0; }
 
@@ -74,8 +76,82 @@ void src_pane_set_text(SrcPane* p, const char* bytes, unsigned short len) {
 }
 
 void src_pane_apply_runs(SrcPane* p, const MdStyleRun* runs, size_t count) {
-    /* Plan 2b walks runs[] and calls TESetStyle. */
-    (void)p; (void)runs; (void)count;
+    short  orig_start, orig_end;
+    size_t i;
+    long   te_len;
+
+    if (!p || !p->te || !runs || count == 0) return;
+
+    /* Save selection to restore after styling (TESetStyle operates on
+     * the current selection). */
+    orig_start = (**p->te).selStart;
+    orig_end   = (**p->te).selEnd;
+    te_len     = (**p->te).teLength;
+
+    /* Reset everything to plain Geneva 12 first; per-run styles below
+     * override only the attributes the run cares about. */
+    {
+        TextStyle base;
+        base.tsFont  = kFontIDGeneva;
+        base.tsFace  = 0;
+        base.tsSize  = 12;
+        base.tsColor.red = base.tsColor.green = base.tsColor.blue = 0;
+        TESetSelect(0, (short)te_len, p->te);
+        TESetStyle(doFont | doFace | doSize | doColor, &base, false, p->te);
+    }
+
+    for (i = 0; i < count; i++) {
+        const MdStyleRun* r = &runs[i];
+        TextStyle ts;
+        short doFlags = 0;
+        short start_off, end_off;
+
+        ts.tsFont = kFontIDGeneva;
+        ts.tsFace = 0;
+        ts.tsSize = 12;
+        ts.tsColor.red = ts.tsColor.green = ts.tsColor.blue = 0;
+
+        switch (r->kind) {
+        case kStyleEmph:
+            ts.tsFace = italic;
+            doFlags = doFace;
+            break;
+        case kStyleStrong:
+            ts.tsFace = bold;
+            doFlags = doFace;
+            break;
+        case kStyleCodeSpan:
+            ts.tsFont = kFontIDMonaco;
+            ts.tsSize = 10;
+            doFlags = doFont | doSize;
+            break;
+        case kStyleLink:
+            ts.tsFace = underline;
+            ts.tsColor.red   = 0x0000;
+            ts.tsColor.green = 0x4000;
+            ts.tsColor.blue  = 0xFFFF;        /* sky blue */
+            doFlags = doFace | doColor;
+            break;
+        case kStyleHtmlSpan:
+            ts.tsFont = kFontIDMonaco;
+            ts.tsSize = 10;
+            ts.tsColor.red   = 0x6000;
+            ts.tsColor.green = 0x0000;
+            ts.tsColor.blue  = 0x8000;        /* purple — distinct from links */
+            doFlags = doFont | doSize | doColor;
+            break;
+        default:
+            continue;                          /* kStylePlain: no override */
+        }
+
+        start_off = (short)r->start;
+        end_off   = (short)(r->start + r->length);
+        TESetSelect(start_off, end_off, p->te);
+        TESetStyle(doFlags, &ts, false, p->te);
+    }
+
+    TESetSelect(orig_start, orig_end, p->te);
+    InvalRect(&p->view_rect);
 }
 
 void src_pane_get_selection(const SrcPane* p,
