@@ -14,10 +14,12 @@
 #include "src/debounce.h"
 #include "render/arena.h"
 #include "render/render.h"
+#include "render/draw_qd.h"
 #include "scanner/scanner.h"
 #include "mdparse/mdparse.h"
 #include <Windows.h>
 #include <Events.h>
+#include <Menus.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -31,6 +33,7 @@ struct WinEditor {
     Arena*        arena;
     RenderModel*  current_model;  /* lives inside arena; reset between cycles */
     DebounceState debounce;
+    WinMode       mode;
 };
 
 static void win_editor_on_edit(void* ctx) {
@@ -102,7 +105,14 @@ void win_editor_handle_event(WinEditor* w, const void* event_record) {
     switch (ev->what) {
     case updateEvt:
         BeginUpdate((WindowPtr)w->window_ref);
-        src_pane_on_update(w->src_pane);
+        if (w->mode == kWinModeRead && w->current_model) {
+            DrawContext  ctx = draw_qd_make_context(w->window_ref);
+            LayoutParams params = layout_params_defaults();
+            EraseRect(&((WindowPtr)w->window_ref)->portRect);
+            (void)render_layout_and_draw(w->current_model, &params, &ctx);
+        } else {
+            src_pane_on_update(w->src_pane);
+        }
         EndUpdate((WindowPtr)w->window_ref);
         break;
     case activateEvt:
@@ -151,6 +161,32 @@ void win_editor_set_doc(WinEditor* w, Doc* new_doc) {
 
 DebounceState* win_editor_debounce_state(WinEditor* w) {
     return w ? &w->debounce : 0;
+}
+
+WinMode win_editor_mode(const WinEditor* w) {
+    return w ? w->mode : kWinModeSource;
+}
+
+void win_editor_set_mode(WinEditor* w, WinMode mode) {
+    MenuHandle view_menu;
+    if (!w) return;
+    if (w->mode == mode) return;
+    w->mode = mode;
+    /* Activate / deactivate the source pane so its caret blinks only
+     * when it's the visible mode. */
+    if (w->src_pane) {
+        src_pane_on_activate(w->src_pane, mode == kWinModeSource);
+    }
+    /* Update the View menu's check marks (item 1 = Source, 2 = Read). */
+    view_menu = GetMenuHandle(131);
+    if (view_menu) {
+        CheckItem(view_menu, 1, mode == kWinModeSource);
+        CheckItem(view_menu, 2, mode == kWinModeRead);
+    }
+    /* Force a full redraw with the new mode's renderer. */
+    if (w->window_ref) {
+        InvalRect(&((WindowPtr)w->window_ref)->portRect);
+    }
 }
 
 void win_editor_run_parse(WinEditor* w) {

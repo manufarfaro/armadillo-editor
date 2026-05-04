@@ -50,6 +50,22 @@ void win_editor_set_doc(WinEditor* w, Doc* new_doc);
  * match (falls back to "Untitled.md" when the Doc has no filename). */
 void win_editor_refresh_title(WinEditor* w);
 
+/* View mode: which pane the editor window is currently displaying.
+ * Source mode shows the TextEdit-backed source pane; Read mode hides
+ * the source pane and draws the Read view via render_layout_and_draw. */
+typedef enum {
+    kWinModeSource = 0,
+    kWinModeRead   = 1
+} WinMode;
+
+/* Switch view mode. No-op if already in the requested mode.
+ * Activates / deactivates the source pane appropriately and
+ * invalidates the window for redraw. */
+void win_editor_set_mode(WinEditor* w, WinMode mode);
+
+/* Read-only accessor for the current mode. */
+WinMode win_editor_mode(const WinEditor* w);
+
 /* Forward-declared opaque DebounceState — defined in src/debounce.h. */
 struct DebounceState;
 typedef struct DebounceState DebounceState;

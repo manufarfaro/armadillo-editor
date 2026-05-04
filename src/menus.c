@@ -23,6 +23,9 @@
 #define kFileSaveAs   6
 #define kFileQuit     8
 
+#define kViewSource   1
+#define kViewRead     2
+
 static MenusNewWindowCb g_new_window_cb = 0;
 static MenusFileCmdCb   g_file_cmd_cb   = 0;
 
@@ -56,6 +59,12 @@ MenuAction menus_handle_command(long menu_select, WinEditor* win,
             (void)Alert(256, 0L);   /* About box */
         }
         /* item 2 is the separator; items 3+ are DAs (handled by OS). */
+        break;
+    case kMenuView:
+        if (win) {
+            if (item == kViewSource) win_editor_set_mode(win, kWinModeSource);
+            if (item == kViewRead)   win_editor_set_mode(win, kWinModeRead);
+        }
         break;
     case kMenuFile:
         switch (item) {
