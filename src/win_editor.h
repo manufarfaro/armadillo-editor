@@ -50,6 +50,23 @@ void win_editor_set_doc(WinEditor* w, Doc* new_doc);
  * match (falls back to "Untitled.md" when the Doc has no filename). */
 void win_editor_refresh_title(WinEditor* w);
 
+/* Forward-declared opaque DebounceState — defined in src/debounce.h. */
+struct DebounceState;
+typedef struct DebounceState DebounceState;
+
+/* Borrowed pointer to the editor's per-window debounce state. The
+ * event loop polls this on idle ticks; on fire it calls
+ * win_editor_run_parse. */
+DebounceState* win_editor_debounce_state(WinEditor* w);
+
+/* Run a full parse cycle: sync doc text from the source pane, reset
+ * the arena, ensure capacity, build a new RenderModel + Scanner inside
+ * the arena, parse via mdparse_run, apply scanner runs to the source
+ * pane, invalidate the window for redraw. Silent on parse failure
+ * (clears current_model so the Read pane stays blank until the next
+ * successful parse). */
+void win_editor_run_parse(WinEditor* w);
+
 /* Dispatch a Mac event (mouseDown/keyDown/updateEvt/activateEvt) that
  * has already been determined to belong to this window. The event
  * pointer is opaque here (vendor-free header). */

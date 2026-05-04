@@ -12,10 +12,12 @@
 #include <string.h>
 
 struct SrcPane {
-    TEHandle    te;
-    Rect        view_rect;
-    void*       window_ref;
-    MacSyscalls sys;
+    TEHandle            te;
+    Rect                view_rect;
+    void*               window_ref;
+    MacSyscalls         sys;
+    SrcPaneEditCallback edit_cb;
+    void*               edit_cb_ctx;
 };
 
 SrcPane* src_pane_new(const SrcPaneParams* params, const MacSyscalls* sys) {
@@ -127,7 +129,7 @@ void src_pane_on_idle(SrcPane* p) {
 
 void src_pane_set_edit_callback(SrcPane* p, SrcPaneEditCallback cb,
                                 void* ctx) {
-    /* Plan 2b stores cb/ctx and fires after TEKey produces a doc
-     * mutation, so debounce_on_edit can observe the keystroke. */
-    (void)p; (void)cb; (void)ctx;
+    if (!p) return;
+    p->edit_cb     = cb;
+    p->edit_cb_ctx = ctx;
 }

@@ -28,6 +28,7 @@
 #include "src/win_editor.h"
 #include "src/doc.h"
 #include "src/file_io.h"
+#include "src/debounce.h"
 #include <MacMemory.h>
 #include <Files.h>
 #include <StandardFile.h>
@@ -212,9 +213,23 @@ static void app_handle_file_cmd(MenusFileCmd cmd, WinEditor* win,
 
 static void event_loop(void) {
     EventRecord ev;
-    const long sleep_ticks = 60;            /* 1 s — Plan 2b drops to 15 */
+    /* 15 ticks (~250 ms) so debounce_poll fires within ~half its
+     * threshold even when no events arrive — quick enough for the
+     * post-keystroke parse cycle to feel "live" without busy-waiting. */
+    const long sleep_ticks = 15;
     while (!g_quit_requested) {
-        if (!WaitNextEvent(everyEvent, &ev, sleep_ticks, 0L)) continue;
+        int got = WaitNextEvent(everyEvent, &ev, sleep_ticks, 0L);
+
+        /* Idle-time debounce poll — runs even when no event arrived
+         * so the parse cycle fires after the user stops typing. */
+        if (g_front_window) {
+            DebounceState* debounce = win_editor_debounce_state(g_front_window);
+            if (debounce && debounce_poll(debounce, &g_syscalls)) {
+                win_editor_run_parse(g_front_window);
+            }
+        }
+
+        if (!got) continue;
 
         switch (ev.what) {
         case mouseDown: {
